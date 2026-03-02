@@ -4,7 +4,6 @@
 
 **Production-grade runtime for autonomous AI agents**
 
-[![CI](https://github.com/agentruntime/agentruntime/actions/workflows/ci.yml/badge.svg)](https://github.com/agentruntime/agentruntime/actions)
 [![Go Report Card](https://goreportcard.com/badge/github.com/agentruntime/agentruntime)](https://goreportcard.com/report/github.com/agentruntime/agentruntime)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Release](https://img.shields.io/github/v/release/agentruntime/agentruntime)](https://github.com/agentruntime/agentruntime/releases)
@@ -78,7 +77,7 @@ AgentRuntime is an **enterprise-grade orchestration platform** for autonomous AI
 
 ```bash
 # Clone the repository
-git clone https://github.com/agentruntime/agentruntime.git
+git clone https://github.com/NikoSokratous/agentctl.git
 cd agentruntime
 
 # Build
