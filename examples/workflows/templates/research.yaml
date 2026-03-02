@@ -1,0 +1,98 @@
+name: "Research Assistant"
+description: "Multi-source research with analysis, synthesis, and report generation"
+version: "1.0.0"
+author: "AgentRuntime Team"
+category: "research"
+tags:
+  - research
+  - analysis
+  - knowledge
+icon: "🔬"
+
+parameters:
+  - name: research_topic
+    type: string
+    description: "Main research topic or question"
+    required: true
+  - name: depth
+    type: string
+    description: "Research depth: quick, standard, comprehensive"
+    required: true
+    default: "standard"
+  - name: sources
+    type: list
+    description: "List of sources to search (web, arxiv, pubmed, etc)"
+    required: false
+    default: ["web", "arxiv"]
+  - name: max_papers
+    type: integer
+    description: "Maximum number of papers to analyze"
+    required: false
+    default: 10
+
+workflow:
+  name: "research-workflow"
+  description: "Comprehensive research and analysis"
+  
+  parallel:
+    - name: "search-arxiv"
+      agent: "arxiv-agent"
+      goal: "Search arXiv for papers related to: {{.Outputs.research_topic}}"
+      output_key: "arxiv_papers"
+      timeout: "5m"
+      condition: "outputs.sources contains 'arxiv'"
+      
+    - name: "search-web"
+      agent: "web-search-agent"
+      goal: "Search web for information about: {{.Outputs.research_topic}}"
+      output_key: "web_results"
+      timeout: "5m"
+      condition: "outputs.sources contains 'web'"
+      
+    - name: "search-pubmed"
+      agent: "pubmed-agent"
+      goal: "Search PubMed for medical/biological papers on: {{.Outputs.research_topic}}"
+      output_key: "pubmed_papers"
+      timeout: "5m"
+      condition: "outputs.sources contains 'pubmed'"
+  
+  steps:
+    - name: "aggregate-sources"
+      agent: "aggregator-agent"
+      goal: "Combine and deduplicate results from all sources"
+      output_key: "all_sources"
+      timeout: "2m"
+      
+    - name: "rank-relevance"
+      agent: "ranking-agent"
+      goal: "Rank sources by relevance to research topic"
+      output_key: "ranked_sources"
+      timeout: "3m"
+      
+    - name: "analyze-papers"
+      agent: "analyzer-agent"
+      goal: "Analyze top {{.Outputs.max_papers}} papers for key findings and methodologies"
+      output_key: "analysis"
+      timeout: "15m"
+      
+    - name: "extract-insights"
+      agent: "insight-agent"
+      goal: "Extract key insights, trends, and patterns from analyzed papers"
+      output_key: "insights"
+      timeout: "5m"
+      
+    - name: "synthesize-findings"
+      agent: "synthesis-agent"
+      goal: "Synthesize findings into coherent narrative answering research question"
+      output_key: "synthesis"
+      timeout: "10m"
+      
+    - name: "generate-report"
+      agent: "report-agent"
+      goal: "Create comprehensive research report with citations and visualizations"
+      output_key: "final_report"
+      timeout: "5m"
+  
+  aggregate: true
+  on_error: "continue"
+  timeout: "1h"

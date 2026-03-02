@@ -1,0 +1,20 @@
+version: "1"
+rules:
+  - name: safe-commands-only
+    match:
+      condition: "input.command.contains('rm -rf') || input.command.contains('dd if=') || input.command.contains('mkfs')"
+    action: deny
+    message: "Dangerous system commands are blocked"
+  
+  - name: sudo-approval
+    match:
+      condition: "input.command.startsWith('sudo ')"
+    action: require_approval
+    approvers: [user]
+    message: "Sudo commands require approval"
+  
+  - name: network-commands-approval
+    match:
+      condition: "input.command.contains('curl') || input.command.contains('wget') || input.command.contains('ssh')"
+    action: require_approval
+    message: "Network commands require confirmation"

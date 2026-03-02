@@ -1,0 +1,281 @@
+# Default values for agentruntime
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Global settings
+global:
+  environment: production
+  domain: agentruntime.example.com
+
+# Replication settings
+replicaCount: 3
+
+# Image settings
+image:
+  repository: agentruntime/agentruntime
+  pullPolicy: IfNotPresent
+  tag: "1.0.0"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# Service Account
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# Pod annotations
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8080"
+  prometheus.io/path: "/metrics"
+
+# Pod security context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+# Container security context
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 8080
+  targetPort: 8080
+  annotations: {}
+
+# Ingress configuration
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  hosts:
+    - host: api.agentruntime.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: agentruntime-tls
+      hosts:
+        - api.agentruntime.example.com
+
+# Resource limits
+resources:
+  limits:
+    cpu: 2000m
+    memory: 4Gi
+  requests:
+    cpu: 500m
+    memory: 1Gi
+
+# Autoscaling
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Liveness and readiness probes
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /ready
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity rules
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - agentruntime
+          topologyKey: kubernetes.io/hostname
+
+# Environment-specific configurations
+env:
+  - name: LOG_LEVEL
+    value: "info"
+  - name: METRICS_ENABLED
+    value: "true"
+  - name: TRACING_ENABLED
+    value: "true"
+
+# PostgreSQL configuration
+postgresql:
+  enabled: true
+  auth:
+    username: agentruntime
+    password: changeme
+    database: agentruntime
+  primary:
+    persistence:
+      enabled: true
+      size: 20Gi
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+
+# Redis configuration
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    password: changeme
+  master:
+    persistence:
+      enabled: true
+      size: 8Gi
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+
+# Operator configuration
+operator:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: agentruntime/operator
+    tag: "1.0.0"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+# Web UI configuration
+web:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: agentruntime/web
+    tag: "1.0.0"
+  service:
+    type: ClusterIP
+    port: 3000
+  ingress:
+    enabled: true
+    hosts:
+      - host: app.agentruntime.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: agentruntime-web-tls
+        hosts:
+          - app.agentruntime.example.com
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+# Service Mesh configuration
+serviceMesh:
+  enabled: false
+  type: istio  # istio or linkerd
+  mtls:
+    mode: STRICT
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 100
+      http:
+        http1MaxPendingRequests: 100
+        http2MaxRequests: 100
+        maxRequestsPerConnection: 2
+    outlierDetection:
+      consecutiveErrors: 5
+      interval: 30s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+
+# Observability
+observability:
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      interval: 30s
+  grafana:
+    enabled: true
+    dashboards:
+      enabled: true
+  jaeger:
+    enabled: true
+    collector:
+      enabled: true
+
+# Backup configuration
+backup:
+  enabled: false
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  retention: 7  # days
+  storage:
+    type: s3
+    bucket: agentruntime-backups
+    region: us-east-1
+
+# Security
+security:
+  networkPolicy:
+    enabled: true
+  podSecurityPolicy:
+    enabled: true
+  secrets:
+    externalSecrets:
+      enabled: false
+      backend: aws-secrets-manager
+
+# Multi-tenancy
+tenancy:
+  enabled: true
+  isolation:
+    enabled: true
+    level: namespace  # namespace or cluster

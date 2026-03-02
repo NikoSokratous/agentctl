@@ -1,0 +1,8 @@
+name: example-go-tool
+version: 1.0.0
+type: goplugin
+binary: ./example_plugin.so
+description: Example Go plugin for demonstration
+author: AgentRuntime Team
+permissions:
+  - compute:cpu

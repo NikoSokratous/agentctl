@@ -1,0 +1,104 @@
+name: "Content Creation Pipeline"
+description: "AI-powered content generation with SEO optimization and multi-platform publishing"
+version: "1.0.0"
+author: "AgentRuntime Team"
+category: "content-creation"
+tags:
+  - content
+  - marketing
+  - seo
+  - social-media
+icon: "✍️"
+
+parameters:
+  - name: topic
+    type: string
+    description: "Content topic or theme"
+    required: true
+  - name: content_type
+    type: string
+    description: "Type: blog-post, social-media, newsletter, video-script"
+    required: true
+    default: "blog-post"
+  - name: target_audience
+    type: string
+    description: "Target audience description"
+    required: true
+  - name: tone
+    type: string
+    description: "Content tone: professional, casual, technical, friendly"
+    required: false
+    default: "professional"
+  - name: word_count
+    type: integer
+    description: "Target word count"
+    required: false
+    default: 1000
+
+workflow:
+  name: "content-pipeline"
+  description: "End-to-end content creation and publishing"
+  steps:
+    - name: "research-topic"
+      agent: "research-agent"
+      goal: "Research topic {{.Outputs.topic}} including trends, statistics, and competitor content"
+      output_key: "research"
+      timeout: "5m"
+      
+    - name: "generate-outline"
+      agent: "outline-agent"
+      goal: "Create structured outline for {{.Outputs.content_type}} targeting {{.Outputs.target_audience}}"
+      output_key: "outline"
+      timeout: "2m"
+      
+    - name: "keyword-research"
+      agent: "seo-agent"
+      goal: "Identify SEO keywords and related terms for topic"
+      output_key: "keywords"
+      timeout: "3m"
+      
+    - name: "write-draft"
+      agent: "writer-agent"
+      goal: "Write {{.Outputs.word_count}} word {{.Outputs.content_type}} in {{.Outputs.tone}} tone following outline"
+      output_key: "draft"
+      timeout: "10m"
+      
+    - name: "optimize-seo"
+      agent: "seo-agent"
+      goal: "Optimize content for SEO: meta description, headers, keyword density"
+      output_key: "seo_optimized"
+      timeout: "3m"
+      
+    - name: "fact-check"
+      agent: "fact-checker-agent"
+      goal: "Verify facts, statistics, and claims in the content"
+      output_key: "fact_check"
+      timeout: "5m"
+      
+    - name: "proofread"
+      agent: "editor-agent"
+      goal: "Proofread for grammar, clarity, and style consistency"
+      output_key: "edited"
+      timeout: "3m"
+      
+    - name: "generate-images"
+      agent: "image-agent"
+      goal: "Generate or suggest relevant images and visual assets"
+      output_key: "visuals"
+      condition: "outputs.content_type == 'blog-post' || outputs.content_type == 'social-media'"
+      timeout: "5m"
+      
+    - name: "create-social-snippets"
+      agent: "social-agent"
+      goal: "Create social media promotional snippets for multiple platforms"
+      output_key: "social_content"
+      timeout: "2m"
+      
+    - name: "publish-content"
+      agent: "publisher-agent"
+      goal: "Publish finalized content to designated platforms"
+      output_key: "published"
+      timeout: "2m"
+  
+  on_error: "stop"
+  timeout: "45m"

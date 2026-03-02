@@ -1,0 +1,16 @@
+version: "1"
+rules:
+  - name: rate-limit-github
+    match:
+      tool: http_request
+      condition: "run.step_count > 50"
+    action: deny
+    message: "Too many GitHub API calls in single run"
+  
+  - name: post-comment-approval
+    match:
+      tool: http_request
+      condition: "input.method == 'POST' && input.url.contains('/comments')"
+    action: require_approval
+    approvers: [maintainer]
+    message: "Posting comments requires maintainer approval"

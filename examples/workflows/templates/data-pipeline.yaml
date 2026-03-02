@@ -1,0 +1,82 @@
+name: "Data Processing Pipeline"
+description: "Extract, transform, and load data with validation and quality checks"
+version: "1.0.0"
+author: "AgentRuntime Team"
+category: "data-pipeline"
+tags:
+  - etl
+  - data-processing
+  - pipeline
+icon: "📊"
+
+parameters:
+  - name: source_type
+    type: string
+    description: "Data source type (database, api, file, s3)"
+    required: true
+    default: "api"
+  - name: source_location
+    type: string
+    description: "Source location URL or path"
+    required: true
+  - name: destination
+    type: string
+    description: "Destination database or storage location"
+    required: true
+  - name: transform_rules
+    type: object
+    description: "Transformation rules to apply"
+    required: false
+
+workflow:
+  name: "data-pipeline"
+  description: "ETL workflow with validation"
+  steps:
+    - name: "extract-data"
+      agent: "extractor-agent"
+      goal: "Extract data from {{.Outputs.source_type}} at {{.Outputs.source_location}}"
+      output_key: "raw_data"
+      timeout: "10m"
+      retry: 3
+      
+    - name: "validate-schema"
+      agent: "validator-agent"
+      goal: "Validate data schema and check for missing or invalid fields"
+      output_key: "validation_results"
+      timeout: "5m"
+      
+    - name: "check-quality"
+      agent: "quality-agent"
+      goal: "Perform data quality checks: completeness, accuracy, consistency"
+      output_key: "quality_score"
+      condition: "outputs.validation_results.valid == true"
+      timeout: "5m"
+      
+    - name: "transform-data"
+      agent: "transformer-agent"
+      goal: "Apply transformation rules and clean data"
+      output_key: "transformed_data"
+      condition: "outputs.quality_score.score >= 0.7"
+      timeout: "15m"
+      
+    - name: "load-data"
+      agent: "loader-agent"
+      goal: "Load transformed data to {{.Outputs.destination}}"
+      output_key: "load_results"
+      timeout: "10m"
+      retry: 2
+      
+    - name: "generate-report"
+      agent: "reporter-agent"
+      goal: "Create pipeline execution report with metrics"
+      output_key: "pipeline_report"
+      timeout: "2m"
+      
+    - name: "send-notification"
+      agent: "notification-agent"
+      goal: "Send completion notification with summary"
+      condition: "outputs.load_results.success == true"
+      timeout: "1m"
+  
+  on_error: "stop"
+  timeout: "1h"

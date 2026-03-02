@@ -1,0 +1,78 @@
+name: support_agent_with_rag
+version: v1.0
+description: Support agent with RAG-enabled knowledge base
+
+model:
+  provider: openai
+  name: gpt-4
+  temperature: 0.7
+
+autonomy_level: 2
+
+tools:
+  - name: search_docs
+    version: "1"
+  - name: create_ticket
+    version: "1"
+
+memory:
+  persistent: true
+  semantic: true
+
+context_assembly:
+  enabled: true
+  max_context_tokens: 8000
+  parallel: true
+  
+  # Embedding configuration
+  embeddings:
+    provider: openai
+    model: text-embedding-3-small
+    api_key_env: OPENAI_API_KEY
+  
+  providers:
+    - type: policy
+      priority: 1
+      enabled: true
+    
+    - type: workflow_state
+      priority: 2
+      enabled: true
+    
+    - type: semantic_memory
+      priority: 3
+      enabled: true
+      config:
+        top_k: 5
+        similarity_threshold: 0.7
+        use_embeddings: true
+    
+    - type: tool_outputs
+      priority: 4
+      enabled: true
+      config:
+        max_results: 10
+    
+    - type: knowledge
+      priority: 5
+      enabled: true
+      config:
+        sources: ["./docs"]
+        top_k: 3
+        chunk_size: 500
+        chunk_overlap: 50
+  
+  assembly:
+    token_budget:
+      policy: 1000
+      workflow_state: 500
+      memory: 3000
+      tool_outputs: 2000
+      knowledge: 1500
+
+max_steps: 50
+timeout: 300s
+
+retry:
+  max_attempts: 3
+  backoff: exponential

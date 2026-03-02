@@ -1,0 +1,8 @@
+name: example-wasm-tool
+version: 1.0.0
+type: wasm
+binary: ./example_wasm_tool.wasm
+description: Example WASM tool for demonstration
+author: AgentRuntime Team
+permissions:
+  - compute:cpu

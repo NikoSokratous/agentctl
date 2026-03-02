@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package agentruntime.v1;
+
+option go_package = "github.com/agentruntime/agentruntime/api/gen/agentruntime/v1;v1";
+
+service RunService {
+  rpc CreateRun(CreateRunRequest) returns (CreateRunResponse);
+  rpc GetRun(GetRunRequest) returns (GetRunResponse);
+  rpc ListRuns(ListRunsRequest) returns (ListRunsResponse);
+  rpc CancelRun(CancelRunRequest) returns (CancelRunResponse);
+}
+
+message CreateRunRequest {
+  string agent_name = 1;
+  string goal = 2;
+}
+
+message CreateRunResponse {
+  string run_id = 1;
+}
+
+message GetRunRequest {
+  string run_id = 1;
+}
+
+message GetRunResponse {
+  string run_id = 1;
+  string agent_name = 2;
+  string goal = 3;
+  string state = 4;
+  int32 step_count = 5;
+}
+
+message ListRunsRequest {
+  int32 limit = 1;
+}
+
+message ListRunsResponse {
+  repeated string run_ids = 1;
+}
+
+message CancelRunRequest {
+  string run_id = 1;
+}
+
+message CancelRunResponse {
+  bool cancelled = 1;
+}

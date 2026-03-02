@@ -1,0 +1,40 @@
+metadata:
+  id: postgres-query
+  name: postgres-query
+  version: 1.0.0
+  author: AgentRuntime Team
+  description: Execute SQL queries and manage PostgreSQL databases
+  type: tool
+  runtime: go
+  license: MIT
+  repository: https://github.com/agentruntime/tools/postgres-query
+  permissions:
+    - network
+    - database
+  dependencies:
+    - name: lib/pq
+      version: ">=1.10.0"
+      type: library
+  checksum: ""
+
+entrypoint: postgres_tool.so
+files:
+  - postgres_tool.so
+  - README.md
+
+environment:
+  POSTGRES_HOST: localhost
+  POSTGRES_PORT: "5432"
+  POSTGRES_DATABASE: ""
+  POSTGRES_USER: ""
+  POSTGRES_PASSWORD: ""
+  POSTGRES_SSLMODE: require
+
+build:
+  command: go
+  args:
+    - build
+    - -buildmode=plugin
+    - -o
+    - postgres_tool.so
+    - ./main.go

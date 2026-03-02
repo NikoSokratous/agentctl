@@ -1,0 +1,120 @@
+name: "DevOps Deployment Pipeline"
+description: "Automated deployment with testing, security scanning, and rollback capabilities"
+version: "1.0.0"
+author: "AgentRuntime Team"
+category: "devops"
+tags:
+  - deployment
+  - ci-cd
+  - testing
+  - monitoring
+icon: "🚀"
+
+parameters:
+  - name: service_name
+    type: string
+    description: "Name of the service to deploy"
+    required: true
+  - name: environment
+    type: string
+    description: "Target environment: dev, staging, production"
+    required: true
+  - name: version
+    type: string
+    description: "Version or git tag to deploy"
+    required: true
+  - name: rollback_on_failure
+    type: boolean
+    description: "Automatically rollback if deployment fails"
+    required: false
+    default: true
+
+workflow:
+  name: "deployment-pipeline"
+  description: "Complete deployment workflow with safety checks"
+  steps:
+    - name: "validate-version"
+      agent: "git-agent"
+      goal: "Verify version {{.Outputs.version}} exists and is tagged properly"
+      output_key: "version_check"
+      timeout: "1m"
+      
+    - name: "run-unit-tests"
+      agent: "test-agent"
+      goal: "Execute full unit test suite"
+      output_key: "unit_tests"
+      timeout: "10m"
+      retry: 1
+      
+    - name: "run-integration-tests"
+      agent: "test-agent"
+      goal: "Run integration tests against test environment"
+      output_key: "integration_tests"
+      condition: "outputs.unit_tests.passed == true"
+      timeout: "15m"
+      
+    - name: "security-scan"
+      agent: "security-agent"
+      goal: "Scan for vulnerabilities in dependencies and container image"
+      output_key: "security"
+      timeout: "5m"
+      
+    - name: "check-breaking-changes"
+      agent: "compatibility-agent"
+      goal: "Check for API breaking changes and compatibility issues"
+      output_key: "compatibility"
+      timeout: "2m"
+      
+    - name: "backup-current"
+      agent: "backup-agent"
+      goal: "Create backup of current {{.Outputs.environment}} deployment"
+      output_key: "backup"
+      condition: "outputs.environment == 'production'"
+      timeout: "5m"
+      
+    - name: "deploy-canary"
+      agent: "deploy-agent"
+      goal: "Deploy canary release to 10% of traffic"
+      output_key: "canary"
+      condition: "outputs.environment == 'production'"
+      timeout: "5m"
+      
+    - name: "monitor-canary"
+      agent: "monitoring-agent"
+      goal: "Monitor canary metrics for 5 minutes: error rate, latency, CPU"
+      output_key: "canary_metrics"
+      condition: "outputs.canary.success == true"
+      timeout: "6m"
+      
+    - name: "deploy-full"
+      agent: "deploy-agent"
+      goal: "Deploy {{.Outputs.service_name}}:{{.Outputs.version}} to {{.Outputs.environment}}"
+      output_key: "deployment"
+      condition: "outputs.canary_metrics.healthy == true || outputs.environment != 'production'"
+      timeout: "10m"
+      
+    - name: "run-smoke-tests"
+      agent: "test-agent"
+      goal: "Execute smoke tests against deployed service"
+      output_key: "smoke_tests"
+      timeout: "5m"
+      
+    - name: "rollback"
+      agent: "deploy-agent"
+      goal: "Rollback to previous version using backup"
+      condition: "outputs.smoke_tests.passed == false && outputs.rollback_on_failure == true"
+      output_key: "rollback"
+      timeout: "5m"
+      
+    - name: "update-status"
+      agent: "notification-agent"
+      goal: "Update deployment status and notify team via Slack/email"
+      timeout: "1m"
+      
+    - name: "update-documentation"
+      agent: "docs-agent"
+      goal: "Update deployment logs and runbook"
+      timeout: "2m"
+  
+  on_error: "stop"
+  timeout: "1h"

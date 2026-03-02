@@ -1,0 +1,23 @@
+name: code-review-bot
+version: "1.0"
+description: Automated code reviewer for pull requests
+
+model:
+  provider: anthropic
+  name: claude-3-5-sonnet-20241022
+  temperature: 0.2
+
+autonomy_level: 2  # Standard - policy-based approval
+
+tools:
+  - name: http_request
+    version: "1"
+
+policy: ./policy.yaml
+
+max_steps: 20
+timeout: 300s
+
+memory:
+  persistent: true
+  semantic: false

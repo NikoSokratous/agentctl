@@ -1,0 +1,27 @@
+apiVersion: v2
+name: agentruntime
+description: A Helm chart for AgentRuntime - Production-grade AI agent orchestration
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - ai
+  - agents
+  - llm
+  - orchestration
+  - workflows
+maintainers:
+  - name: AgentRuntime Team
+    email: team@agentruntime.io
+home: https://github.com/agentruntime/agentruntime
+sources:
+  - https://github.com/agentruntime/agentruntime
+dependencies:
+  - name: postgresql
+    version: "12.x.x"
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
+  - name: redis
+    version: "17.x.x"
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled

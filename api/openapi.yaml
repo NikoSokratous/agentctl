@@ -1,0 +1,265 @@
+openapi: 3.0.3
+info:
+  title: Agent Runtime API
+  description: |
+    RESTful API for managing autonomous AI agent runs.
+    
+    ## Authentication
+    API endpoints (except `/health`, `/ready`, `/metrics`) require an API key via the `Authorization` header:
+    ```
+    Authorization: Bearer YOUR_API_KEY
+    ```
+  version: 0.1.0
+  contact:
+    name: Agent Runtime Project
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+  - url: https://api.agentruntime.example.com
+    description: Production server
+
+tags:
+  - name: Health
+    description: Health and readiness checks
+  - name: Runs
+    description: Agent run management
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      description: Returns the health status of the service
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /ready:
+    get:
+      tags: [Health]
+      summary: Readiness check
+      description: Returns whether the service is ready to accept requests
+      operationId: getReady
+      responses:
+        '200':
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ready
+                  timestamp:
+                    type: string
+                    format: date-time
+        '503':
+          description: Service is not ready
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: not ready
+                  error:
+                    type: string
+                    example: store unavailable
+
+  /metrics:
+    get:
+      tags: [Health]
+      summary: Prometheus metrics
+      description: Exposes Prometheus metrics for monitoring
+      operationId: getMetrics
+      responses:
+        '200':
+          description: Prometheus metrics in text format
+          content:
+            text/plain:
+              schema:
+                type: string
+
+  /v1/runs:
+    post:
+      tags: [Runs]
+      summary: Create a new run
+      description: Creates a new agent run with the specified configuration
+      operationId: createRun
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - agent_name
+                - goal
+              properties:
+                agent_name:
+                  type: string
+                  description: Name of the agent to run
+                  example: demo-agent
+                goal:
+                  type: string
+                  description: The goal or task for the agent
+                  example: Calculate the sum of 5 and 10
+      responses:
+        '200':
+          description: Run created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  run_id:
+                    type: string
+                    format: uuid
+                    example: 550e8400-e29b-41d4-a716-446655440000
+        '400':
+          description: Invalid request body
+        '401':
+          description: Unauthorized
+
+    get:
+      tags: [Runs]
+      summary: List runs
+      description: Lists recent agent runs
+      operationId: listRuns
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of runs to return
+          schema:
+            type: integer
+            default: 100
+            minimum: 1
+            maximum: 1000
+      responses:
+        '200':
+          description: List of run IDs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  run_ids:
+                    type: array
+                    items:
+                      type: string
+                      format: uuid
+        '401':
+          description: Unauthorized
+
+  /v1/runs/{id}:
+    get:
+      tags: [Runs]
+      summary: Get run details
+      description: Retrieves details of a specific run
+      operationId: getRun
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Run ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Run details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Run'
+        '404':
+          description: Run not found
+        '401':
+          description: Unauthorized
+
+  /v1/runs/{id}/cancel:
+    post:
+      tags: [Runs]
+      summary: Cancel a run
+      description: Cancels an ongoing agent run
+      operationId: cancelRun
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Run ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Run cancelled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: cancelled
+        '404':
+          description: Run not found
+        '401':
+          description: Unauthorized
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: API key for authentication
+
+  schemas:
+    Run:
+      type: object
+      properties:
+        run_id:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+        agent_name:
+          type: string
+          example: demo-agent
+        goal:
+          type: string
+          example: Calculate the sum of 5 and 10
+        state:
+          type: string
+          enum: [pending, running, completed, failed, cancelled]
+          example: completed
+        step_count:
+          type: integer
+          example: 3
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time

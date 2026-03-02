@@ -1,0 +1,43 @@
+apiVersion: agentruntime.io/v1
+kind: Policy
+metadata:
+  name: production-safety-policy
+  namespace: default
+spec:
+  description: "Production safety and compliance policy"
+  version: "1.0.0"
+  rules:
+    - id: "no-dangerous-tools"
+      description: "Prevent use of dangerous system tools in production"
+      condition: 'env == "production" && (tool == "shell" || tool == "file-delete")'
+      action: "deny"
+      severity: "critical"
+
+    - id: "require-approval-for-deployments"
+      description: "Require human approval for production deployments"
+      condition: 'env == "production" && action == "deploy"'
+      action: "require_approval"
+      severity: "high"
+
+    - id: "limit-api-calls"
+      description: "Warn when API call count exceeds threshold"
+      condition: "api_calls > 1000"
+      action: "warn"
+      severity: "medium"
+
+    - id: "check-sensitive-data"
+      description: "Deny operations involving sensitive data patterns"
+      condition: 'contains(data, "password") || contains(data, "api_key") || contains(data, "secret")'
+      action: "deny"
+      severity: "critical"
+
+    - id: "enforce-cost-limits"
+      description: "Deny operations exceeding cost threshold"
+      condition: "estimated_cost > 100.00"
+      action: "require_approval"
+      severity: "high"
+
+  approvers:
+    - "admin@example.com"
+    - "devops@example.com"
+  enabled: true

@@ -1,0 +1,30 @@
+name: demo-agent
+version: "1.0"
+description: Demo agent using built-in tools
+
+model:
+  provider: openai
+  name: gpt-4o-mini
+  temperature: 0.2
+
+autonomy_level: 2
+
+tools:
+  - name: echo
+    version: "1"
+  - name: calc
+    version: "1"
+  - name: http_request
+    version: "1"
+
+policy: ./policy.yaml
+
+memory:
+  persistent: false
+  semantic: false
+
+max_steps: 10
+timeout: 60s
+retry:
+  max_attempts: 3
+  backoff: exponential

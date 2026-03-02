@@ -1,0 +1,66 @@
+{{- if and .Values.serviceMesh.enabled (eq .Values.serviceMesh.type "istio") }}
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: {{ include "agentruntime.fullname" . }}
+  labels:
+    {{- include "agentruntime.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "agentruntime.selectorLabels" . | nindent 6 }}
+  mtls:
+    mode: {{ .Values.serviceMesh.mtls.mode }}
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: {{ include "agentruntime.fullname" . }}
+  labels:
+    {{- include "agentruntime.labels" . | nindent 4 }}
+spec:
+  host: {{ include "agentruntime.fullname" . }}
+  trafficPolicy:
+    {{- with .Values.serviceMesh.trafficPolicy }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    tls:
+      mode: ISTIO_MUTUAL
+    loadBalancer:
+      simple: LEAST_REQUEST
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: {{ include "agentruntime.fullname" . }}
+  labels:
+    {{- include "agentruntime.labels" . | nindent 4 }}
+spec:
+  hosts:
+  - {{ include "agentruntime.fullname" . }}
+  {{- if .Values.ingress.enabled }}
+  {{- range .Values.ingress.hosts }}
+  - {{ .host }}
+  {{- end }}
+  {{- end }}
+  http:
+  - match:
+    - uri:
+        prefix: /api
+    route:
+    - destination:
+        host: {{ include "agentruntime.fullname" . }}
+        port:
+          number: {{ .Values.service.port }}
+      weight: 100
+    retries:
+      attempts: 3
+      perTryTimeout: 2s
+      retryOn: 5xx,reset,connect-failure,refused-stream
+    timeout: 30s
+    fault:
+      delay:
+        percentage:
+          value: 0
+        fixedDelay: 0s
+{{- end }}

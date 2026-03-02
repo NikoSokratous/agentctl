@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agentd
+  labels:
+    app: agentd
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agentd
+  template:
+    metadata:
+      labels:
+        app: agentd
+    spec:
+      containers:
+        - name: agentd
+          image: agentruntime/agentd:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: AGENTD_ADDR
+              value: ":8080"
+            - name: AGENTD_STORE
+              value: /data/agent.db
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: agentd
+spec:
+  selector:
+    app: agentd
+  ports:
+    - port: 80
+      targetPort: 8080
+  type: ClusterIP

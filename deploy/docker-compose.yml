@@ -1,0 +1,12 @@
+version: "3.8"
+services:
+  agentd:
+    build: ..
+    ports:
+      - "8080:8080"
+    environment:
+      - AGENTD_ADDR=:8080
+      - AGENTD_STORE=agent.db
+    volumes:
+      - ./data:/data
+    command: ["agentd", "--addr", ":8080", "--store", "/data/agent.db"]

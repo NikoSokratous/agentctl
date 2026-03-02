@@ -1,0 +1,35 @@
+apiVersion: agentruntime.io/v1
+kind: Agent
+metadata:
+  name: coder-agent
+  namespace: default
+spec:
+  role: coder
+  goal: "Write high-quality, well-tested code following best practices"
+  llm:
+    provider: openai
+    model: gpt-4
+    temperature: 0.2
+    maxTokens: 4000
+  tools:
+    - code-editor
+    - git
+    - shell
+  memory:
+    enabled: true
+    provider: qdrant
+    config:
+      url: "http://qdrant:6333"
+  replicas: 2
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 2000m
+      memory: 4Gi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilization: 70

@@ -1,0 +1,34 @@
+metadata:
+  id: slack-notifier
+  name: slack-notifier
+  version: 1.0.0
+  author: AgentRuntime Team
+  description: Send notifications and messages to Slack channels
+  type: tool
+  runtime: go
+  license: MIT
+  repository: https://github.com/agentruntime/tools/slack-notifier
+  permissions:
+    - network
+    - api
+  dependencies: []
+  checksum: ""
+
+entrypoint: slack_tool.so
+files:
+  - slack_tool.so
+  - README.md
+
+environment:
+  SLACK_WEBHOOK_URL: ""
+  SLACK_BOT_TOKEN: ""
+  SLACK_CHANNEL: "#general"
+
+build:
+  command: go
+  args:
+    - build
+    - -buildmode=plugin
+    - -o
+    - slack_tool.so
+    - ./main.go

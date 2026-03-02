@@ -1,0 +1,208 @@
+name: "code-review-production-policy"
+version: "1.0.0"
+description: "Production security and cost policies for code review agent"
+environment: production
+
+# Global settings
+settings:
+  default_action: allow
+  risk_threshold: 7.0
+  audit_log: true
+
+# Policy rules
+rules:
+  # Cost control
+  - id: limit-expensive-operations
+    description: "Prevent operations exceeding cost budget"
+    condition: |
+      estimated_cost > 5.0
+    action: deny
+    severity: high
+    message: "Operation would exceed $5 cost limit. Request approval for expensive operations."
+
+  - id: daily-budget-check
+    description: "Enforce daily budget limit per tenant"
+    condition: |
+      tenant.daily_cost + estimated_cost > tenant.daily_budget
+    action: deny
+    severity: critical
+    message: "Daily budget exceeded. Cost: ${cost}, Budget: ${budget}"
+
+  # Security rules
+  - id: block-credential-exposure
+    description: "Block posting of credentials or secrets"
+    condition: |
+      tool.name == "github_api" &&
+      tool.params.comment.contains("password") ||
+      tool.params.comment.contains("api_key") ||
+      tool.params.comment.contains("secret") ||
+      tool.params.comment.contains("token")
+    action: deny
+    severity: critical
+    message: "Potential credential exposure detected in comment"
+
+  - id: require-approval-for-comments
+    description: "Require human approval for posting comments"
+    condition: |
+      tool.name == "github_api" &&
+      tool.params.action == "create_comment"
+    action: require_approval
+    severity: medium
+    approval_webhook: "https://approvals.company.com/github-comment"
+    approval_timeout: "1h"
+
+  # Rate limiting
+  - id: github-api-rate-limit
+    description: "Prevent GitHub API rate limit exhaustion"
+    condition: |
+      tool.name == "github_api" &&
+      context.github_api_calls_last_hour > 4000
+    action: deny
+    severity: high
+    message: "GitHub API rate limit approaching. Try again later."
+
+  # Execution control
+  - id: limit-shell-commands
+    description: "Block dangerous shell commands"
+    condition: |
+      tool.name == "shell_execute" &&
+      (tool.params.command.contains("rm -rf") ||
+       tool.params.command.contains("sudo") ||
+       tool.params.command.contains("chmod 777") ||
+       tool.params.command.contains(">") ||
+       tool.params.command.contains("wget") ||
+       tool.params.command.contains("curl http://"))
+    action: deny
+    severity: critical
+    message: "Dangerous shell command blocked"
+
+  - id: timeout-long-operations
+    description: "Timeout operations exceeding time limit"
+    condition: |
+      step.duration > duration("10m")
+    action: interrupt
+    severity: medium
+    message: "Operation timeout after 10 minutes"
+
+  # Data protection
+  - id: prevent-pii-exposure
+    description: "Block exposure of personally identifiable information"
+    condition: |
+      tool.params.contains("email") ||
+      tool.params.contains("phone") ||
+      tool.params.contains("ssn") ||
+      tool.params.contains("credit_card")
+    action: require_approval
+    severity: high
+    approval_webhook: "https://approvals.company.com/pii-review"
+
+  - id: file-size-limit
+    description: "Block reading of very large files"
+    condition: |
+      tool.name == "file_read" &&
+      tool.params.file_size > size("10MB")
+    action: deny
+    severity: medium
+    message: "File too large. Maximum size: 10MB"
+
+# Risk scoring configuration
+risk_scoring:
+  enabled: true
+  categories:
+    - name: data_access
+      weight: 1.5
+      conditions:
+        - "tool.permissions.contains('fs:read')"
+        - "tool.name == 'github_api'"
+    
+    - name: data_modification
+      weight: 2.5
+      conditions:
+        - "tool.permissions.contains('fs:write')"
+        - "tool.name == 'shell_execute'"
+        - "tool.params.action == 'create_comment'"
+    
+    - name: external_communication
+      weight: 1.2
+      conditions:
+        - "tool.permissions.contains('net:external')"
+        - "tool.name == 'http_request'"
+    
+    - name: cost_impact
+      weight: 2.0
+      conditions:
+        - "estimated_cost > 1.0"
+        - "llm.model.contains('gpt-4')"
+    
+    - name: execution_risk
+      weight: 3.0
+      conditions:
+        - "tool.name == 'shell_execute'"
+        - "tool.name == 'eval'"
+    
+    - name: credential_access
+      weight: 3.5
+      conditions:
+        - "tool.params.contains('token')"
+        - "tool.params.contains('credentials')"
+    
+    - name: public_exposure
+      weight: 2.0
+      conditions:
+        - "tool.name == 'github_api' && tool.params.action == 'create_comment'"
+        - "tool.name == 'post_public'"
+
+# Alerting
+alerts:
+  - id: high-cost-alert
+    condition: |
+      run.total_cost > 8.0
+    action: notify
+    webhook: "https://alerts.company.com/high-cost"
+    message: "Code review run exceeded $8: ${cost}"
+
+  - id: policy-violation-alert
+    condition: |
+      policy.denials > 0
+    action: notify
+    webhook: "https://alerts.company.com/policy-violation"
+    message: "Policy violations detected in code review"
+
+  - id: approval-timeout-alert
+    condition: |
+      approval.pending_duration > duration("30m")
+    action: notify
+    webhook: "https://alerts.company.com/approval-timeout"
+    message: "Approval pending for 30+ minutes"
+
+# Audit configuration
+audit:
+  enabled: true
+  encrypt: true
+  kms_key_id: "arn:aws:kms:us-east-1:123456789:key/12345"
+  retention_days: 90
+  fields:
+    - run_id
+    - user
+    - tenant
+    - tool_name
+    - action
+    - cost
+    - duration
+    - policy_decision
+
+# Compliance
+compliance:
+  frameworks:
+    - SOC2
+    - GDPR
+    - HIPAA
+  
+  data_classification:
+    - type: "source_code"
+      level: "confidential"
+      retention: "7 years"
+    
+    - type: "pr_comments"
+      level: "internal"
+      retention: "3 years"

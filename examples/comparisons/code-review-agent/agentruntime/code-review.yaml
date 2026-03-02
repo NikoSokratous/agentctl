@@ -1,0 +1,229 @@
+name: "code-review-agent"
+description: "Automated code review agent with security analysis, quality checks, and intelligent reporting"
+version: "1.0.0"
+
+# Workflow parameters
+parameters:
+  - name: pr_url
+    type: string
+    required: true
+    description: "GitHub PR URL to review"
+  
+  - name: severity_threshold
+    type: string
+    default: "medium"
+    description: "Minimum severity for reporting (low, medium, high, critical)"
+  
+  - name: auto_comment
+    type: boolean
+    default: false
+    description: "Automatically post comment to PR (requires approval if false)"
+  
+  - name: include_suggestions
+    type: boolean
+    default: true
+    description: "Include code improvement suggestions"
+
+# Cost and resource limits
+limits:
+  max_steps: 20
+  timeout: "15m"
+  cost_budget: 10.00  # Max $10 per run
+
+# Retry configuration
+retry:
+  max_attempts: 3
+  backoff: exponential
+  initial_delay: "1s"
+  max_delay: "30s"
+  retry_on:
+    - network_error
+    - rate_limit
+    - temporary_failure
+
+# Human approval gates
+human_approval:
+  required_for:
+    - "post_comment"  # Always require approval before posting
+  webhook: "https://approvals.company.com/code-review"
+  timeout: "1h"
+
+# Observability
+observability:
+  tracing: true
+  metrics: true
+  log_level: "info"
+  cost_tracking: true
+
+# Workflow steps
+steps:
+  # Step 1: Fetch PR details and changes
+  - name: fetch_pr
+    agent: "github_agent"
+    goal: |
+      Fetch pull request details from {{.pr_url}}:
+      - PR title, description, author
+      - List of changed files
+      - Diff for each file
+      - CI/CD status
+      - Labels and reviewers
+    tools:
+      - github_api
+      - http_request
+    output_key: "pr_data"
+    timeout: "2m"
+    retry:
+      max_attempts: 3
+
+  # Step 2: Run static analysis
+  - name: static_analysis
+    agent: "linter_agent"
+    goal: |
+      Run comprehensive static analysis on the code changes:
+      - Linting (ESLint, Pylint, golangci-lint based on language)
+      - Security scanning (detect vulnerabilities, secrets)
+      - Complexity analysis (cyclomatic complexity, code smells)
+      - Dependency check (outdated, vulnerable packages)
+      
+      Changed files: {{.Outputs.pr_data.files}}
+      Filter: severity >= {{.severity_threshold}}
+    tools:
+      - shell_execute
+      - file_read
+      - security_scanner
+    output_key: "lint_results"
+    timeout: "5m"
+    parallel: false
+
+  # Step 3: Perform intelligent code review
+  - name: code_review
+    agent: "code_reviewer"
+    goal: |
+      Conduct thorough code review focusing on:
+      
+      1. Code Quality:
+         - Readability and maintainability
+         - Design patterns and architecture
+         - Error handling
+         - Test coverage
+      
+      2. Best Practices:
+         - Language-specific idioms
+         - Performance considerations
+         - Security best practices
+      
+      3. Logic Issues:
+         - Potential bugs
+         - Edge cases
+         - Race conditions
+      
+      PR Context:
+      - Title: {{.Outputs.pr_data.title}}
+      - Description: {{.Outputs.pr_data.description}}
+      - Files changed: {{.Outputs.pr_data.files}}
+      
+      Diff:
+      {{.Outputs.pr_data.diff}}
+      
+      Include suggestions: {{.include_suggestions}}
+    llm:
+      model: "gpt-4"
+      temperature: 0.3
+      max_tokens: 4000
+    output_key: "review_comments"
+    timeout: "5m"
+
+  # Step 4: Check for breaking changes
+  - name: check_breaking_changes
+    agent: "api_analyzer"
+    goal: |
+      Analyze if this PR introduces breaking changes:
+      - Public API modifications
+      - Function signature changes
+      - Removed exports
+      - Changed behavior in public interfaces
+      
+      Files: {{.Outputs.pr_data.files}}
+      Previous version: {{.Outputs.pr_data.base_sha}}
+      New version: {{.Outputs.pr_data.head_sha}}
+    tools:
+      - git_diff
+      - ast_parser
+    output_key: "breaking_changes"
+    timeout: "3m"
+    condition: |
+      Outputs.pr_data.target_branch == "main" || 
+      Outputs.pr_data.target_branch == "master"
+
+  # Step 5: Generate comprehensive report
+  - name: generate_report
+    agent: "report_generator"
+    goal: |
+      Create a comprehensive, well-formatted code review report:
+      
+      ## Summary
+      - Overall assessment (approve/request changes/needs discussion)
+      - Key findings summary
+      - Critical issues count
+      
+      ## Static Analysis Results
+      {{.Outputs.lint_results}}
+      
+      ## Code Review
+      {{.Outputs.review_comments}}
+      
+      ## Breaking Changes
+      {{if .Outputs.breaking_changes}}
+      ⚠️ This PR contains breaking changes:
+      {{.Outputs.breaking_changes}}
+      {{else}}
+      ✅ No breaking changes detected
+      {{end}}
+      
+      ## Recommendations
+      - Prioritized action items
+      - Suggested improvements
+      - Testing recommendations
+      
+      Format: GitHub Markdown with emojis and code blocks
+    output_key: "final_report"
+    timeout: "2m"
+
+  # Step 6: Post comment to GitHub
+  - name: post_comment
+    agent: "github_commenter"
+    goal: |
+      Post the code review report as a comment on {{.pr_url}}:
+      
+      {{.Outputs.final_report}}
+      
+      Add footer:
+      ---
+      🤖 Automated review by AgentRuntime
+      Cost: ${{.TotalCost}}
+      Review ID: {{.RunID}}
+    tools:
+      - github_api
+    output_key: "comment_result"
+    timeout: "1m"
+    condition: |
+      params.auto_comment || approval.approved
+    
+    # This step requires human approval if auto_comment is false
+    require_approval: true
+
+# Error handling
+on_failure:
+  action: "notify"
+  webhook: "https://alerts.company.com/workflow-failed"
+  retry: false
+
+# Success hooks
+on_success:
+  action: "log"
+  message: "Code review completed successfully for {{.pr_url}}"
+
+# Cleanup
+cleanup:
+  - action: "delete_temp_files"
+  - action: "clear_cache"

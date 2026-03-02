@@ -1,0 +1,70 @@
+apiVersion: agentruntime.io/v1
+kind: Workflow
+metadata:
+  name: code-review-workflow
+  namespace: default
+spec:
+  name: "Multi-Agent Code Review"
+  description: "Automated code review with linting, security scanning, and human-like review"
+  steps:
+    - name: fetch-code
+      agent: git-agent
+      goal: "Fetch the latest code from the pull request"
+      outputKey: code
+      timeout: "5m"
+      retry: 3
+
+    - name: lint
+      agent: linter-agent
+      goal: "Run linting checks on the code"
+      outputKey: lint_results
+      dependsOn:
+        - fetch-code
+      timeout: "10m"
+
+    - name: security-scan
+      agent: security-agent
+      goal: "Perform security analysis and vulnerability scanning"
+      outputKey: security_results
+      dependsOn:
+        - fetch-code
+      timeout: "15m"
+
+    - name: reviewer-1
+      agent: senior-reviewer
+      goal: "Review code quality, architecture, and best practices"
+      outputKey: review_1
+      dependsOn:
+        - lint
+        - security-scan
+      timeout: "20m"
+
+    - name: reviewer-2
+      agent: junior-reviewer
+      goal: "Review code readability and documentation"
+      outputKey: review_2
+      dependsOn:
+        - lint
+        - security-scan
+      timeout: "20m"
+
+    - name: aggregate
+      agent: aggregator-agent
+      goal: "Aggregate all review results and create summary"
+      outputKey: final_review
+      dependsOn:
+        - reviewer-1
+        - reviewer-2
+      timeout: "5m"
+
+    - name: auto-approve
+      agent: decision-agent
+      goal: "Determine if the PR can be auto-approved"
+      condition: "outputs.lint_results.passed == true && outputs.security_results.critical == 0"
+      dependsOn:
+        - aggregate
+      timeout: "2m"
+
+  timeout: "1h"
+  onFailure: "abort"
+  maxConcurrent: 1

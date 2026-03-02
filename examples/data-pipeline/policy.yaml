@@ -1,0 +1,31 @@
+version: "1"
+rules:
+  # Read-only in dev, write needs approval in prod
+  - name: prod-db-write-approval
+    match:
+      tool: db_write
+      environment: production
+    action: require_approval
+    approvers: [data-team, ops]
+    message: "Production writes require data team approval"
+  
+  # Block destructive operations
+  - name: no-drop-tables
+    match:
+      condition: "input.query.contains('DROP TABLE') || input.query.contains('TRUNCATE')"
+    action: deny
+    message: "DROP and TRUNCATE operations are blocked"
+  
+  # High-volume data needs approval
+  - name: large-dataset-approval
+    match:
+      condition: "input.limit > 100000 || input.query.contains('SELECT *')"
+    action: require_approval
+    message: "Large data operations need review"
+  
+  # Alert on anomalies
+  - name: anomaly-detected
+    match:
+      condition: "output.anomaly_score > 0.9"
+    action: require_approval
+    message: "Anomaly detected, review before proceeding"

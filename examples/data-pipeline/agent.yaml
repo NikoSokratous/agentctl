@@ -1,0 +1,25 @@
+name: data-pipeline
+version: "1.0"
+description: Automated ETL agent with policy controls
+
+model:
+  provider: openai
+  name: gpt-4o-mini
+  temperature: 0.1
+
+autonomy_level: 2  # Standard - policy-based approval
+
+tools:
+  - name: calc
+    version: "1"
+  - name: http_request
+    version: "1"
+
+policy: ./policy.yaml
+
+memory:
+  persistent: true
+  semantic: false
+
+max_steps: 30
+timeout: 300s

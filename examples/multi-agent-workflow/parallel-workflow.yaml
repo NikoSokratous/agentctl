@@ -1,0 +1,24 @@
+# Example: Multi-Source Analysis Workflow
+
+name: multi-source-analysis
+description: Analyze data from multiple sources in parallel
+
+parallel:
+  - name: twitter-analysis
+    agent: twitter-analyzer
+    goal: "Analyze Twitter sentiment for {{.topic}}"
+    output_key: twitter_data
+  
+  - name: reddit-analysis
+    agent: reddit-analyzer  
+    goal: "Analyze Reddit discussions for {{.topic}}"
+    output_key: reddit_data
+  
+  - name: news-analysis
+    agent: news-analyzer
+    goal: "Analyze news articles for {{.topic}}"
+    output_key: news_data
+
+aggregate: true
+timeout: 10m
+on_error: continue

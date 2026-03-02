@@ -1,0 +1,20 @@
+# Example: Research and Summarize Workflow
+
+name: research-and-summarize
+description: Research a topic and generate a summary
+
+steps:
+  - name: research
+    agent: research-assistant
+    goal: "Research {{.topic}}"
+    output_key: research_data
+    timeout: 5m
+  
+  - name: summarize
+    agent: summarizer
+    goal: "Summarize: {{.research_data}}"
+    output_key: summary
+    timeout: 2m
+
+timeout: 10m
+on_error: stop

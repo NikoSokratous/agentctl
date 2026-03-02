@@ -1,0 +1,91 @@
+name: research-synthesis
+description: Research and synthesis workflow with multiple agents
+version: 1.0.0
+author: AgentRuntime
+category: research
+
+parameters:
+  - name: research_topic
+    description: Topic to research
+    type: string
+    required: true
+  
+  - name: num_sources
+    description: Number of sources to gather
+    type: int
+    required: false
+    default: 5
+  
+  - name: synthesis_style
+    description: Synthesis output style
+    type: string
+    required: false
+    default: "academic"
+
+workflow:
+  name: research-synthesis
+  description: Multi-agent research and synthesis pipeline
+  
+  steps:
+    - name: query-expansion
+      agent: query-expander
+      goal: "Expand research topic '{{.research_topic}}' into search queries"
+      output_key: queries
+      timeout: 2m
+    
+    - name: search-academic
+      agent: academic-searcher
+      goal: "Search academic databases for {{.num_sources}} sources"
+      depends_on:
+        - query-expansion
+      output_key: academic_sources
+      timeout: 5m
+    
+    - name: search-web
+      agent: web-searcher
+      goal: "Search web for additional sources"
+      depends_on:
+        - query-expansion
+      output_key: web_sources
+      timeout: 5m
+    
+    - name: extract-content
+      agent: content-extractor
+      goal: "Extract key information from all sources"
+      depends_on:
+        - search-academic
+        - search-web
+      output_key: extracted_content
+      timeout: 10m
+    
+    - name: fact-check
+      agent: fact-checker
+      goal: "Verify facts and claims in extracted content"
+      depends_on:
+        - extract-content
+      output_key: verified_content
+      timeout: 8m
+    
+    - name: synthesize
+      agent: synthesizer
+      goal: "Synthesize verified content into {{.synthesis_style}} report"
+      depends_on:
+        - fact-check
+      output_key: synthesis
+      timeout: 10m
+    
+    - name: cite-sources
+      agent: citation-agent
+      goal: "Add proper citations and bibliography"
+      depends_on:
+        - synthesize
+      output_key: final_report
+      timeout: 3m
+    
+    - name: quality-check
+      agent: quality-checker
+      goal: "Verify report quality and completeness"
+      depends_on:
+        - cite-sources
+      output_key: quality_score
+      timeout: 2m

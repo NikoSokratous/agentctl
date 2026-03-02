@@ -1,0 +1,48 @@
+name: security-policy-tests
+description: Test suite for security policy
+policy: security-policy
+version: 1.0.0
+
+tests:
+  - name: "Block unauthorized file deletion"
+    tool: delete_file
+    input:
+      path: "/data/production.db"
+    expect:
+      denied: true
+      reasonContains: "unauthorized"
+      minRiskScore: 0.7
+
+  - name: "Allow authorized file deletion"
+    tool: delete_file
+    input:
+      path: "/tmp/cache.dat"
+    context:
+      approved_by: "admin@example.com"
+    expect:
+      allowed: true
+      maxRiskScore: 0.5
+
+  - name: "Alert on PII access"
+    tool: read_file
+    input:
+      path: "/data/customers_pii.csv"
+    expect:
+      alert: true
+      minRiskScore: 0.6
+
+  - name: "Block external HTTP without approval"
+    tool: http_request
+    input:
+      url: "https://external-api.com/data"
+    expect:
+      denied: true
+      reasonContains: "external"
+
+  - name: "Allow internal HTTP requests"
+    tool: http_request
+    input:
+      url: "https://internal.company.com/api"
+    expect:
+      allowed: true
+      maxRiskScore: 0.3

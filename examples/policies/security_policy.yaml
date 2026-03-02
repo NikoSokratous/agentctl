@@ -1,0 +1,45 @@
+apiVersion: policy/v2
+kind: Policy
+metadata:
+  name: security-policy
+  version: 1.0.0
+  changelog:
+    - version: 1.0.0
+      date: 2026-02-26
+      author: security@example.com
+      changes: "Initial security policy with file and network controls"
+spec:
+  defaultEffect: allow
+  mode: enforcing
+
+rules:
+  - id: block-prod-delete
+    tool: delete_file
+    effect: deny
+    condition: "input.path.startsWith('/data/production')"
+    reason: "Production data deletion requires approval"
+    riskScore: 0.9
+    requireApproval: true
+
+  - id: alert-pii-access
+    tool: read_file
+    effect: allow
+    condition: "input.path.contains('pii') || input.path.contains('customers')"
+    reason: "PII data access logged"
+    alert: true
+    riskScore: 0.7
+
+  - id: block-external-http
+    tool: http_request
+    effect: deny
+    condition: "!input.url.startsWith('https://internal.')"
+    reason: "External API access requires approval"
+    riskScore: 0.8
+    requireApproval: true
+
+  - id: allow-tmp-delete
+    tool: delete_file
+    effect: allow
+    condition: "input.path.startsWith('/tmp/')"
+    reason: "Temporary file deletion allowed"
+    riskScore: 0.2

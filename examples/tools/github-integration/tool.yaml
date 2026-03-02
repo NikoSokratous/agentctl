@@ -1,0 +1,33 @@
+metadata:
+  id: github-integration
+  name: github-integration
+  version: 1.0.0
+  author: AgentRuntime Team
+  description: GitHub API integration tool for repository management
+  type: tool
+  runtime: go
+  license: MIT
+  repository: https://github.com/agentruntime/tools/github-integration
+  permissions:
+    - network
+    - api
+  dependencies: []
+  checksum: ""
+
+entrypoint: github_tool.so
+files:
+  - github_tool.so
+  - README.md
+
+environment:
+  GITHUB_TOKEN: ""
+  GITHUB_API_URL: https://api.github.com
+
+build:
+  command: go
+  args:
+    - build
+    - -buildmode=plugin
+    - -o
+    - github_tool.so
+    - ./main.go

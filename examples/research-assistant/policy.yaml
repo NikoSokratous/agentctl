@@ -1,0 +1,15 @@
+version: "1"
+rules:
+  - name: rate-limit-web-scraping
+    match:
+      tool: http_request
+      condition: "run.step_count > 100"
+    action: deny
+    message: "Too many web requests, possible scraping abuse"
+  
+  - name: respect-robots-txt
+    match:
+      tool: http_request
+      condition: "input.url.contains('/admin/') || input.url.contains('/private/')"
+    action: deny
+    message: "Respecting robots.txt restrictions"

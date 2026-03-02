@@ -1,0 +1,69 @@
+name: "Code Review Workflow"
+description: "Automated code review with multiple agents for comprehensive analysis"
+version: "1.0.0"
+author: "AgentRuntime Team"
+category: "code-review"
+tags:
+  - code-review
+  - quality
+  - automated
+icon: "🔍"
+
+parameters:
+  - name: repository_url
+    type: string
+    description: "Git repository URL to review"
+    required: true
+  - name: branch
+    type: string
+    description: "Branch name to review"
+    required: true
+    default: "main"
+  - name: pr_number
+    type: integer
+    description: "Pull request number (optional)"
+    required: false
+
+workflow:
+  name: "code-review-flow"
+  description: "Multi-agent code review workflow"
+  steps:
+    - name: "fetch-code"
+      agent: "git-agent"
+      goal: "Clone repository {{.Outputs.repository_url}} and checkout branch {{.Outputs.branch}}"
+      output_key: "code"
+      timeout: "2m"
+      
+    - name: "static-analysis"
+      agent: "linter-agent"
+      goal: "Run static analysis on the code from {{.Outputs.code.path}}"
+      output_key: "lint_results"
+      timeout: "5m"
+      
+    - name: "security-scan"
+      agent: "security-agent"
+      goal: "Scan code for security vulnerabilities"
+      output_key: "security_results"
+      condition: "outputs.code.path != ''"
+      timeout: "5m"
+      
+    - name: "complexity-analysis"
+      agent: "complexity-agent"
+      goal: "Analyze code complexity and maintainability"
+      output_key: "complexity"
+      timeout: "3m"
+      
+    - name: "generate-report"
+      agent: "reporter-agent"
+      goal: "Generate comprehensive code review report combining all findings"
+      output_key: "final_report"
+      timeout: "2m"
+      
+    - name: "post-comment"
+      agent: "git-agent"
+      goal: "Post review results as PR comment if PR number provided"
+      condition: "outputs.pr_number != null"
+      timeout: "1m"
+  
+  on_error: "continue"
+  timeout: "20m"

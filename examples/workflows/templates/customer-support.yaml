@@ -1,0 +1,88 @@
+name: "Customer Support Automation"
+description: "Intelligent customer support ticket routing, analysis, and response"
+version: "1.0.0"
+author: "AgentRuntime Team"
+category: "customer-support"
+tags:
+  - support
+  - customer-service
+  - automation
+icon: "💬"
+
+parameters:
+  - name: ticket_id
+    type: string
+    description: "Support ticket ID"
+    required: true
+  - name: customer_email
+    type: string
+    description: "Customer email address"
+    required: true
+  - name: priority
+    type: string
+    description: "Ticket priority: low, medium, high, urgent"
+    required: false
+    default: "medium"
+
+workflow:
+  name: "support-workflow"
+  description: "Automated support ticket handling"
+  steps:
+    - name: "fetch-ticket"
+      agent: "ticket-agent"
+      goal: "Retrieve ticket {{.Outputs.ticket_id}} with full history and context"
+      output_key: "ticket"
+      timeout: "1m"
+      
+    - name: "analyze-sentiment"
+      agent: "sentiment-agent"
+      goal: "Analyze customer sentiment and urgency from ticket content"
+      output_key: "sentiment"
+      timeout: "30s"
+      
+    - name: "classify-issue"
+      agent: "classifier-agent"
+      goal: "Classify issue type: technical, billing, feature-request, bug, other"
+      output_key: "category"
+      timeout: "30s"
+      
+    - name: "check-knowledge-base"
+      agent: "kb-agent"
+      goal: "Search knowledge base for similar issues and solutions"
+      output_key: "kb_matches"
+      timeout: "2m"
+      
+    - name: "escalate-if-urgent"
+      agent: "escalation-agent"
+      goal: "Escalate to human agent if sentiment is negative or priority is urgent"
+      condition: "outputs.sentiment.score < 0.3 || outputs.priority == 'urgent'"
+      output_key: "escalation"
+      timeout: "30s"
+      
+    - name: "generate-response"
+      agent: "response-agent"
+      goal: "Generate helpful response based on KB matches and issue classification"
+      condition: "outputs.escalation == null"
+      output_key: "response"
+      timeout: "2m"
+      
+    - name: "review-response"
+      agent: "quality-agent"
+      goal: "Review response for clarity, completeness, and tone"
+      condition: "outputs.response != null"
+      output_key: "reviewed_response"
+      timeout: "1m"
+      
+    - name: "send-response"
+      agent: "ticket-agent"
+      goal: "Post response to ticket and notify customer via email"
+      condition: "outputs.reviewed_response.approved == true"
+      timeout: "1m"
+      
+    - name: "update-ticket-status"
+      agent: "ticket-agent"
+      goal: "Update ticket status and add internal notes"
+      timeout: "30s"
+  
+  on_error: "continue"
+  timeout: "15m"
