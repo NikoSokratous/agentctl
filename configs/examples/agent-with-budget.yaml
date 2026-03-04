@@ -1,0 +1,27 @@
+# Example agent config with budget caps and alerts
+name: budget-agent
+version: "1.0"
+description: Agent with daily budget limit and alert webhook
+
+model:
+  provider: openai
+  name: gpt-4o-mini
+  temperature: 0.2
+
+autonomy_level: 2
+
+tools:
+  - name: echo
+    version: "1"
+
+policy: ./policy.yaml
+
+max_steps: 10
+timeout: 60s
+
+budget:
+  budget_limit: 10.0          # USD hard cap (0 = no limit)
+  alert_threshold: 0.8        # Fire alert at 80% of budget
+  alert_webhook: https://example.com/webhooks/budget  # POST when threshold hit
+  period: daily               # daily | weekly | monthly
+  tenant_id: ""               # Optional scope; empty = all tenants

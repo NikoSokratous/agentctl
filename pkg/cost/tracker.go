@@ -299,20 +299,23 @@ func (ct *CostTracker) GetCostsByUser(ctx context.Context, tenantID string, star
 	return costs, rows.Err()
 }
 
-// GetTotalCost returns the total cost for a given time range
+// GetTotalCost returns the total cost for a given time range.
+// If tenantID is empty, returns cost across all tenants.
 func (ct *CostTracker) GetTotalCost(ctx context.Context, tenantID string, start, end time.Time) (float64, error) {
-	query := `
-		SELECT COALESCE(SUM(cost), 0) as total_cost
-		FROM cost_entries
-		WHERE tenant_id = ? AND timestamp BETWEEN ? AND ?
-	`
-
+	var query string
+	var args []interface{}
+	if tenantID == "" {
+		query = `SELECT COALESCE(SUM(cost), 0) as total_cost FROM cost_entries WHERE timestamp BETWEEN ? AND ?`
+		args = []interface{}{start, end}
+	} else {
+		query = `SELECT COALESCE(SUM(cost), 0) as total_cost FROM cost_entries WHERE tenant_id = ? AND timestamp BETWEEN ? AND ?`
+		args = []interface{}{tenantID, start, end}
+	}
 	var totalCost float64
-	err := ct.db.QueryRowContext(ctx, query, tenantID, start, end).Scan(&totalCost)
+	err := ct.db.QueryRowContext(ctx, query, args...).Scan(&totalCost)
 	if err != nil {
 		return 0, fmt.Errorf("query total cost: %w", err)
 	}
-
 	return totalCost, nil
 }
 

@@ -2,7 +2,7 @@
 
 **Release Date**: February 26, 2026  
 **Status**: Production Ready  
-**GitHub**: https://github.com/agentruntime/agentruntime
+**GitHub**: https://github.com/NikoSokratous/agentctl
 
 ---
 
@@ -344,7 +344,7 @@ agentctl run --agent agent.yaml --goal "Help me with deployment"
 ### Quick Start
 ```bash
 # Clone repository
-git clone https://github.com/agentruntime/agentruntime.git
+git clone https://github.com/NikoSokratous/agentctl.git
 cd agentruntime
 
 # Install dependencies
@@ -473,7 +473,7 @@ Special thanks to:
 ## 📞 Support
 
 - **Documentation**: https://docs.agentruntime.io
-- **GitHub Issues**: https://github.com/agentruntime/agentruntime/issues
+- **GitHub Issues**: https://github.com/NikoSokratous/agentctl/issues
 - **Discord**: https://discord.gg/agentruntime
 - **Email**: support@agentruntime.io
 

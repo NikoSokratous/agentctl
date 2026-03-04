@@ -20,7 +20,27 @@ type AgentConfig struct {
 	MaxSteps        int                   `yaml:"max_steps"`
 	Timeout         string                `yaml:"timeout"`
 	Retry           RetryConfig           `yaml:"retry"`
-	ContextAssembly ContextAssemblyConfig `yaml:"context_assembly"` // NEW
+	ContextAssembly ContextAssemblyConfig `yaml:"context_assembly"`
+	MCPSources      []MCPSourceConfig     `yaml:"mcp_sources"`
+	Budget          *BudgetConfig         `yaml:"budget"`
+}
+
+// BudgetConfig configures budget limits and alerts.
+type BudgetConfig struct {
+	Limit          float64 `yaml:"budget_limit" json:"budget_limit"`                   // Hard cap in USD (0 = no limit)
+	AlertThreshold float64 `yaml:"alert_threshold" json:"alert_threshold"`             // Fraction to alert (e.g. 0.8 = 80%)
+	AlertWebhook   string  `yaml:"alert_webhook" json:"alert_webhook"`                 // URL to POST when alert fires
+	Period         string  `yaml:"period" json:"period"`                               // daily, weekly, monthly
+	TenantID       string  `yaml:"tenant_id" json:"tenant_id"`                         // Optional scope
+}
+
+// MCPSourceConfig configures an MCP tool source (stdio or http).
+type MCPSourceConfig struct {
+	Type       string   `yaml:"type"`        // "stdio" or "http"
+	Command    string   `yaml:"command"`     // for stdio
+	Args       []string `yaml:"args"`        // for stdio
+	URL        string   `yaml:"url"`         // for http
+	ToolPrefix string   `yaml:"tool_prefix"` // optional prefix for tool names
 }
 
 // ModelConfig configures the LLM.

@@ -631,6 +631,6 @@ func (p *CustomProvider) Fetch(ctx context.Context, input ContextInput) (*Contex
 
 ## Support
 
-- GitHub Issues: [Report bugs](https://github.com/agentruntime/agentruntime/issues)
-- Discussions: [Ask questions](https://github.com/agentruntime/agentruntime/discussions)
+- GitHub Issues: [Report bugs](https://github.com/NikoSokratous/agentctl/issues)
+- Discussions: [Ask questions](https://github.com/NikoSokratous/agentctl/discussions)
 - Discord: [Join community](https://discord.gg/agentruntime)

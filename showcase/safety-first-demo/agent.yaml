@@ -1,0 +1,25 @@
+name: safety-demo-agent
+version: "1.0"
+description: Agent for Safety-First demo - policies block risky actions
+
+model:
+  provider: openai
+  name: gpt-4o-mini
+  temperature: 0.2
+
+autonomy_level: 2
+
+tools:
+  - name: echo
+    version: "1"
+  - name: http_request
+    version: "1"
+
+policy: ./policy.yaml
+
+memory:
+  persistent: false
+  semantic: false
+
+max_steps: 5
+timeout: 30s

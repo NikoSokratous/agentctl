@@ -1,6 +1,6 @@
 import React from 'react'
-import { Link } from 'react-router-dom'
-import { Activity, Settings, GitBranch, Store, BarChart3 } from 'lucide-react'
+import { Link, useLocation } from 'react-router-dom'
+import { Activity, Settings, GitBranch, Store, BarChart3, Shield } from 'lucide-react'
 import './Layout.css'
 
 interface LayoutProps {
@@ -8,52 +8,48 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
+  const location = useLocation()
+
+  const navItems = [
+    { to: '/', icon: Activity, label: 'Dashboard' },
+    { to: '/workflows/designer', icon: GitBranch, label: 'Workflow Designer' },
+    { to: '/workflows/marketplace', icon: Store, label: 'Marketplace' },
+    { to: '/analytics', icon: BarChart3, label: 'Analytics' },
+    { to: '/policy-playground', icon: Shield, label: 'Policy Playground' },
+  ]
+
   return (
     <div className="layout">
-      <nav className="sidebar">
+      <aside className="sidebar">
         <div className="sidebar-header">
-          <Activity size={32} className="logo-icon" />
-          <h1>AgentRuntime</h1>
+          <div className="logo">
+            <Activity size={24} className="logo-icon" />
+            <span className="logo-text">AgentRuntime</span>
+          </div>
         </div>
-        
-        <ul className="nav-menu">
-          <li>
-            <Link to="/" className="nav-link">
-              <Activity size={20} />
-              <span>Dashboard</span>
+
+        <nav className="nav">
+          {navItems.map(({ to, icon: Icon, label }) => (
+            <Link
+              key={to}
+              to={to}
+              className={`nav-link ${location.pathname === to || (to !== '/' && location.pathname.startsWith(to)) ? 'active' : ''}`}
+            >
+              <Icon size={20} />
+              <span>{label}</span>
             </Link>
-          </li>
-          <li>
-            <Link to="/workflows/designer" className="nav-link">
-              <GitBranch size={20} />
-              <span>Workflow Designer</span>
-            </Link>
-          </li>
-          <li>
-            <Link to="/workflows/marketplace" className="nav-link">
-              <Store size={20} />
-              <span>Marketplace</span>
-            </Link>
-          </li>
-          <li>
-            <Link to="/analytics" className="nav-link">
-              <BarChart3 size={20} />
-              <span>Analytics</span>
-            </Link>
-          </li>
-          <li>
-            <Link to="/settings" className="nav-link">
-              <Settings size={20} />
-              <span>Settings</span>
-            </Link>
-          </li>
-        </ul>
-        
+          ))}
+        </nav>
+
         <div className="sidebar-footer">
-          <div className="version">v1.0.0</div>
+          <Link to="/settings" className="nav-link">
+            <Settings size={20} />
+            <span>Settings</span>
+          </Link>
+          <div className="version">v2.0.0</div>
         </div>
-      </nav>
-      
+      </aside>
+
       <main className="main-content">
         {children}
       </main>

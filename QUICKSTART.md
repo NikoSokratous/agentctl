@@ -13,7 +13,7 @@ Get AgentRuntime up and running in under 5 minutes!
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/agentruntime/agentruntime.git
+git clone https://github.com/NikoSokratous/agentctl.git
 cd agentruntime
 ```
 
@@ -351,8 +351,8 @@ open http://localhost:16686
 
 ### Community
 - 💬 Join [Discord](https://discord.gg/agentruntime)
-- 🐛 Report issues on [GitHub](https://github.com/agentruntime/agentruntime/issues)
-- ⭐ Star the [repository](https://github.com/agentruntime/agentruntime)
+- 🐛 Report issues on [GitHub](https://github.com/NikoSokratous/agentctl/issues)
+- ⭐ Star the [repository](https://github.com/NikoSokratous/agentctl)
 
 ## Common Issues
 

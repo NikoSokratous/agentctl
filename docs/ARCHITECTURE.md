@@ -1,6 +1,6 @@
 # AgentRuntime Architecture
 
-**Last Updated**: v1.0.0 | 2026-02-27
+**Last Updated**: v2.0.0 | March 2026
 
 This document provides a comprehensive overview of AgentRuntime's architecture, design principles, and implementation details.
 
@@ -92,8 +92,8 @@ AgentRuntime is a **layered, microservices-ready platform** for orchestrating au
 │  ┌──────────────────────────┴───────────────────────────┐        │
 │  │         Authentication & Authorization                │        │
 │  │   - Bearer Token / API Key                           │        │
-│  │   - OAuth2 / OIDC (Google, GitHub, Custom)          │        │
-│  │   - RBAC with role/permission mapping                │        │
+│  │   - OAuth2 / OIDC / SAML 2.0 (Okta, Azure AD, etc.)  │        │
+│  │   - Advanced RBAC (templates, org hierarchy)         │        │
 │  └──────────────────────────┬───────────────────────────┘        │
 └─────────────────────────────┼────────────────────────────────────┘
                               │
@@ -165,13 +165,13 @@ AgentRuntime is a **layered, microservices-ready platform** for orchestrating au
 ├─────────────────────────────┼────────────────────────────────────┤
 │  ┌──────────────┬───────────┴─────────┬──────────────┐          │
 │  │ LLM Provider │   Tool Registry     │  Memory      │          │
-│  │  Adapters    │                     │  Backends    │          │
+│  │  Adapters    │   + MCP support     │  Backends    │          │
 │  ├──────────────┤──────────────────────┼──────────────┤          │
 │  │ - OpenAI     │ - Versioned         │ - SQLite     │          │
 │  │ - Anthropic  │ - Schema-validated  │ - PostgreSQL │          │
 │  │ - Ollama     │ - Permission-gated  │ - Redis      │          │
 │  │ - Custom     │ - Go Plugins (.so)  │ - Qdrant     │          │
-│  │              │ - WASM Modules      │ - Weaviate   │          │
+│  │              │ - WASM, MCP         │ - Weaviate   │          │
 │  └──────────────┴─────────────────────┴──────────────┘          │
 └─────────────────────────────┼────────────────────────────────────┘
                               │
@@ -314,7 +314,16 @@ Result: Execute or Block
 | **Semantic** | HNSW / Qdrant | Similarity search | Permanent |
 | **Event Log** | Append-only DB | Audit, replay | Immutable |
 
-### 6. LLM Integration
+### 6. MCP (Model Context Protocol)
+
+**Location**: `pkg/mcp/`
+
+**Responsibilities**:
+- Connect agents to MCP-compatible tools and data sources
+- Standard protocol for model context exchange
+- See [pkg/mcp/README.md](../pkg/mcp/README.md)
+
+### 7. LLM Integration
 
 **Location**: `pkg/llm/`
 
@@ -490,9 +499,18 @@ type LLMProvider interface {
 **Key Resources**:
 - **Custom Resources**: `Agent`, `Workflow`, `Policy`
 - **ConfigMaps**: Policies, LLM configs
-- **Secrets**: API keys, DB credentials
+- **Secrets**: API keys, DB credentials (or Vault/external backends)
 - **Services**: ClusterIP, LoadBalancer
 - **PVCs**: PostgreSQL, Redis, Qdrant
+
+### Air-Gapped Deployment
+
+For fully disconnected environments, use `scripts/offline-install.sh bundle` to create a tarball with binaries and configs (including `configs/compliance/`). Transfer to the air-gapped environment and run `install.sh`. Local LLMs (e.g. Ollama) supported. See [deploy/air-gapped/README.md](../deploy/air-gapped/README.md).
+
+### Compliance and SIEM
+
+- **Compliance Pack**: SOC2 and HIPAA configs in `configs/compliance/`
+- **SIEM Export**: `GET /v1/compliance/audit/export?format=json|csv|cef` for audit log export to SIEM systems
 
 ---
 
@@ -511,13 +529,13 @@ type LLMProvider interface {
 ┌─────────────────────────────────────────────────────────────┐
 │  Layer 2: Authentication                                     │
 │  - Bearer Token / API Key                                   │
-│  - OAuth2 / OIDC (Google, GitHub, Custom)                   │
+│  - OAuth2 / OIDC / SAML 2.0 (Okta, Azure AD, OneLogin)      │
 │  - JWT validation                                           │
 └─────────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────────┐
 │  Layer 3: Authorization                                      │
-│  - RBAC (roles, permissions)                                │
+│  - RBAC (role templates, org hierarchy, delegation)         │
 │  - Tenant namespace isolation                               │
 │  - Resource ownership validation                            │
 └─────────────────────────────────────────────────────────────┘
@@ -547,9 +565,13 @@ type LLMProvider interface {
 ### Secrets Management
 
 - **Kubernetes Secrets**: Encrypted at rest
-- **External KMS**: AWS KMS, GCP KMS, Vault
+- **HashiCorp Vault**: KV v2 backend, secret references (`secret:ref:path/to/secret`)
+- **AWS/GCP Secrets Manager**: Stubs for future integration
+- **External KMS**: AWS KMS, GCP KMS for key encryption
 - **Key Rotation**: Automated with zero downtime
 - **Audit Logs**: Encrypted with separate keys
+
+See [Secrets Management](guides/secrets-management.md).
 
 ---
 
@@ -633,31 +655,31 @@ type LLMProvider interface {
 
 ### Workflow Execution
 
-The workflow orchestrator and webhook handlers delegate to the agent runtime when integration is available. Until full runtime integration, `executeStep` uses simulated execution (e.g., `time.Sleep`) and webhook-triggered runs are marked completed without real agent execution. This is the v1 integration point for production deployments.
+The workflow engine uses a pluggable `StepExecutor` interface. The default `SimulatedExecutor` is used for design-time and testing; wire a custom executor via `NewWorkflowEngineWithExecutor` for real agent runs. Webhook-triggered runs are marked completed without execution until runner integration (Phase 2–3).
 
 ### Kubernetes Operator
 
-The K8s operator type definitions are complete, but `SchemeBuilder` registration in `k8s/operator/api/v1/types.go` is commented out until DeepCopy methods are generated. Run `controller-gen` as documented in [k8s/operator/BUILD_NOTES.md](../k8s/operator/BUILD_NOTES.md), then uncomment the `init()` registration.
+Run `make generate-operator` (or `controller-gen` per [k8s/operator/BUILD_NOTES.md](../k8s/operator/BUILD_NOTES.md)) before first build. Generated `zz_generated.deepcopy.go` is committed.
 
-### Placeholders and Stubs
+### Remaining Stubs
 
-Some advanced features use intentional stubs or simplified fallbacks in v1.0:
-
-- **Replay**: `executeSideEffect` and PII encryption in the recorder are placeholders.
-- **Registry**: Plugin artifact download returns a placeholder payload until artifact storage is wired.
-- **Risk/Cost**: `containsPII`, cost-exceeded checks, and some RBAC fallbacks use simplified implementations.
-- **Context assembly**: Semantic search and RAG in memory/knowledge providers are extension points for v1.2.
-
-These do not affect core policy enforcement, agent execution, or observability.
+- **Policy tests**: SQLite-backed policy tests require CGO; may fail on Windows with CGO disabled.
+- **RBAC/Cost**: Some cost-exceeded checks and RBAC fallbacks use simplified implementations for non-enterprise paths.
 
 ---
 
 ## Further Reading
 
 - **[Deployment Guide](DEPLOYMENT.md)** - Production deployment patterns
+- **[Air-Gapped Deployment](../deploy/air-gapped/README.md)** - Offline / disconnected deployment
 - **[Security Guide](SECURITY.md)** - Hardening and best practices
+- **[Enterprise SSO](guides/enterprise-sso.md)** - SAML, OIDC configuration
+- **[Secrets Management](guides/secrets-management.md)** - Vault, AWS, GCP backends
+- **[Advanced RBAC](guides/advanced-rbac.md)** - Role templates, delegation
+- **[Compliance Pack](../configs/compliance/README.md)** - SOC2, HIPAA, SIEM export
 - **[Plugin Development](PLUGIN_DEVELOPMENT.md)** - Creating custom tools
 - **[API Reference](API_REFERENCE.md)** - REST and GraphQL APIs
+- **[SUPPORT.md](../SUPPORT.md)** - Support tiers and contact
 
 ---
 

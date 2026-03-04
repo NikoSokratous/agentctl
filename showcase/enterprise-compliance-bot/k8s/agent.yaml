@@ -1,0 +1,27 @@
+apiVersion: agentruntime.io/v1
+kind: Agent
+metadata:
+  name: enterprise-compliance-bot
+  namespace: default
+spec:
+  role: compliance
+  goal: "Assist with compliance tasks while adhering to governance policies"
+  llm:
+    provider: openai
+    model: gpt-4o-mini
+    temperature: 0.2
+    maxTokens: 2000
+  tools:
+    - echo
+    - calc
+    - http_request
+  policy:
+    name: enterprise-compliance-policy
+  replicas: 1
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 2Gi

@@ -1,0 +1,20 @@
+name: code-review
+description: Multi-step code review workflow
+version: "1.0.0"
+author: agentruntime
+category: code-review
+parameters:
+  - name: repo
+    type: string
+    required: true
+    description: Git repository URL
+workflow:
+  steps:
+    - name: fetch
+      agent: git-agent
+      goal: Fetch code
+    - name: review
+      agent: review-agent
+      goal: Review code
+      depends_on:
+        - fetch

@@ -1,0 +1,17 @@
+# Example: MCP tool sources for AgentRuntime
+# Add mcp_sources to your agent config to use MCP tools
+
+mcp_sources:
+  # Stdio: spawn an MCP server as subprocess (e.g. npx -y @modelcontextprotocol/server-filesystem)
+  - type: stdio
+    command: npx
+    args:
+      - -y
+      - @modelcontextprotocol/server-filesystem
+      - /tmp
+    tool_prefix: mcp_fs_
+
+  # HTTP: connect to remote MCP server
+  # - type: http
+  #   url: https://mcp.example.com
+  #   tool_prefix: mcp_remote_

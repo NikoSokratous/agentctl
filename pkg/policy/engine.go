@@ -28,6 +28,11 @@ func LoadEngine(path string) (*Engine, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read policy: %w", err)
 	}
+	return LoadEngineFromBytes(data)
+}
+
+// LoadEngineFromBytes loads a policy engine from YAML bytes.
+func LoadEngineFromBytes(data []byte) (*Engine, error) {
 	var cfg PolicyConfig
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, fmt.Errorf("parse policy: %w", err)

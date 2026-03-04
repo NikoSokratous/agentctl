@@ -452,5 +452,5 @@ export AGENT_RUNTIME_API_KEYS="$OLD_KEYS,$NEW_KEYS"
 
 ## Support
 
-- GitHub Issues: https://github.com/agentruntime/agentruntime/issues
+- GitHub Issues: https://github.com/NikoSokratous/agentctl/issues
 - Discord: (coming soon)

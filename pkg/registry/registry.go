@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -277,9 +279,22 @@ func (r *Registry) GetReviews(ctx context.Context, pluginID string, limit int) (
 	return reviews, nil
 }
 
-// storePlugin stores plugin in database.
+// storePlugin stores plugin in database and writes artifact to local storage when provided.
 func (r *Registry) storePlugin(ctx context.Context, meta *PluginMetadata, artifactData []byte) error {
 	metaJSON, _ := json.Marshal(meta.Metadata)
+	artifactURL := ""
+
+	if len(artifactData) > 0 && r.localPath != "" {
+		artifactDir := filepath.Join(r.localPath, meta.ID)
+		if err := os.MkdirAll(artifactDir, 0755); err != nil {
+			return fmt.Errorf("create artifact dir: %w", err)
+		}
+		artifactPath := filepath.Join(artifactDir, meta.Version+".tar.gz")
+		if err := os.WriteFile(artifactPath, artifactData, 0644); err != nil {
+			return fmt.Errorf("write artifact: %w", err)
+		}
+		artifactURL = artifactPath
+	}
 
 	query := `
 		INSERT INTO plugins (
@@ -288,7 +303,8 @@ func (r *Registry) storePlugin(ctx context.Context, meta *PluginMetadata, artifa
 		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(id) DO UPDATE SET
 			updated_at = CURRENT_TIMESTAMP,
-			metadata = excluded.metadata
+			metadata = excluded.metadata,
+			artifact_url = excluded.artifact_url
 	`
 
 	_, err := r.db.ExecContext(ctx, query,
@@ -298,9 +314,9 @@ func (r *Registry) storePlugin(ctx context.Context, meta *PluginMetadata, artifa
 		meta.Author,
 		meta.Type,
 		string(metaJSON),
-		"",  // artifact_url would be set after upload
-		0,   // initial downloads
-		0.0, // initial rating
+		artifactURL,
+		0,
+		0.0,
 		meta.CreatedAt,
 	)
 

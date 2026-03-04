@@ -1,0 +1,39 @@
+# HIPAA-oriented policy bundle for AgentRuntime
+# Covers: access control (164.312(a)), audit controls (164.312(b)), integrity (164.312(c))
+version: "1"
+rules:
+  # PHI / ePHI: require approval for any tool that may access or transmit PHI
+  - name: hipaa-phi-access-approval
+    match:
+      risk_score: ">= 0.6"
+    action: require_approval
+    approvers:
+      - privacy-officer
+      - security-officer
+    message: HIPAA 164.312(a) - Potential PHI access requires approval
+
+  # Block unencrypted or external transmission of sensitive data
+  - name: hipaa-block-external-transmit
+    match:
+      tool: send_email
+      condition: "input.to != ''"
+    action: require_approval
+    approvers:
+      - privacy-officer
+    message: HIPAA 164.312(e) - External transmission requires approval
+
+  # Production healthcare environment: no direct DB write without approval
+  - name: hipaa-production-writes
+    match:
+      environment: production
+    action: require_approval
+    approvers:
+      - security-officer
+    message: HIPAA 164.312(c) - Production changes require approval
+
+  # Deny high-risk actions that could compromise integrity
+  - name: hipaa-deny-high-risk
+    match:
+      risk_score: ">= 0.9"
+    action: deny
+    message: HIPAA 164.312(c) - High-risk action denied to protect ePHI integrity

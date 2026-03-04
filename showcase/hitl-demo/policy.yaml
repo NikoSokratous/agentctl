@@ -1,0 +1,19 @@
+version: "1"
+rules:
+  # Require human approval for non-GET HTTP requests
+  - name: require-approval-mutations
+    match:
+      tool: http_request
+      condition: "input.method != 'GET' && input.method != 'get'"
+    action: require_approval
+    message: "Non-GET HTTP requests require human approval"
+    approvers:
+      - human
+
+  # Block external URLs
+  - name: block-external
+    match:
+      tool: http_request
+      condition: "!input.url.startsWith('http://localhost') && !input.url.startsWith('https://internal.')"
+    action: deny
+    message: "External HTTP blocked"

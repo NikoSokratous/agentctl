@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/agentruntime/agentruntime/internal/store"
+	"github.com/agentruntime/agentruntime/pkg/api"
 	"github.com/agentruntime/agentruntime/pkg/observe"
 	"github.com/google/uuid"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -94,6 +95,9 @@ func (s *Server) Run() error {
 	mux.HandleFunc("GET /v1/runs", s.handleListRuns)
 	mux.HandleFunc("POST /v1/runs/{id}/cancel", s.handleCancelRun)
 	mux.HandleFunc("GET /v1/runs/{id}/stream", s.handleStream)
+
+	// Policy Playground
+	mux.HandleFunc("POST /v1/policy/check", api.HandlePolicyCheck)
 
 	// Apply middlewares
 	var handler http.Handler = mux

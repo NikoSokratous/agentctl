@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/gorilla/mux"
@@ -187,11 +188,24 @@ func (s *Server) handleDownloadPlugin(w http.ResponseWriter, r *http.Request) {
 	// Increment download counter
 	s.registry.IncrementDownloads(ctx, pluginID)
 
-	// Placeholder: would serve actual artifact file
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%s-%s.tar.gz", plugin.Name, plugin.Version))
+
+	// Stream from local artifact file when available
+	if plugin.ArtifactURL != "" {
+		f, err := os.Open(plugin.ArtifactURL)
+		if err == nil {
+			defer f.Close()
+			w.WriteHeader(http.StatusOK)
+			io.Copy(w, f)
+			return
+		}
+		// Fall through to placeholder if file not found
+	}
+
+	// No artifact or file missing: return empty/minimal placeholder
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("plugin artifact placeholder"))
+	w.Write([]byte(""))
 }
 
 // handleGetStats retrieves plugin statistics.

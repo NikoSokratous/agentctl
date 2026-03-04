@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -280,7 +281,8 @@ func (a *AuditLogger) MarkReviewed(ctx context.Context, logID, reviewedBy string
 	return nil
 }
 
-// Export exports audit logs to a format for compliance reporting.
+// Export exports audit logs to a format for compliance reporting and SIEM.
+// Supported formats: json, csv, cef (Common Event Format for SIEM).
 func (a *AuditLogger) Export(ctx context.Context, filter AuditFilter, format string) ([]byte, error) {
 	logs, err := a.Query(ctx, filter)
 	if err != nil {
@@ -292,9 +294,59 @@ func (a *AuditLogger) Export(ctx context.Context, filter AuditFilter, format str
 		return json.MarshalIndent(logs, "", "  ")
 	case "csv":
 		return a.exportCSV(logs)
+	case "cef":
+		return a.exportCEF(logs)
 	default:
 		return nil, fmt.Errorf("unsupported format: %s", format)
 	}
+}
+
+// exportCEF exports logs in Common Event Format for SIEM (e.g. ArcSight, Splunk).
+// CEF:Version|Device Vendor|Device Product|Device Version|Signature ID|Name|Severity|Extension
+func (a *AuditLogger) exportCEF(logs []AuditLog) ([]byte, error) {
+	const (
+		cefVersion   = "0"
+		deviceVendor = "AgentRuntime"
+		deviceProduct = "PolicyEngine"
+		deviceVersion = "1.0"
+	)
+	var out []byte
+	for _, log := range logs {
+		signatureID := "policy-" + log.Decision
+		name := "Policy " + log.Decision
+		severity := "3" // 1-10, 3 = low, 7 = medium, 10 = critical
+		if log.Decision == "deny" {
+			severity = "7"
+		} else if log.Decision == "alert" {
+			severity = "6"
+		}
+		ext := fmt.Sprintf("rt=%d msg=%s agent=%s policy=%s tool=%s action=%s riskScore=%.2f",
+			log.Timestamp.UnixMilli(),
+			escapeCEF(log.DenyReason),
+			escapeCEF(log.AgentName),
+			escapeCEF(log.PolicyName),
+			escapeCEF(log.Tool),
+			escapeCEF(log.Action),
+			log.RiskScore,
+		)
+		if log.RunID != "" {
+			ext += " runId=" + escapeCEF(log.RunID)
+		}
+		line := fmt.Sprintf("CEF:%s|%s|%s|%s|%s|%s|%s|%s\n",
+			cefVersion, deviceVendor, deviceProduct, deviceVersion,
+			signatureID, name, severity, ext)
+		out = append(out, []byte(line)...)
+	}
+	return out, nil
+}
+
+func escapeCEF(s string) string {
+	if s == "" {
+		return ""
+	}
+	// CEF extension values: backslash and equals must be escaped
+	r := strings.NewReplacer(`\`, `\\`, `=`, `\=`, "\n", `\n`, "\r", `\r`)
+	return r.Replace(s)
 }
 
 // exportCSV exports logs as CSV.

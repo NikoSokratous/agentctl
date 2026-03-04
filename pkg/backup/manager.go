@@ -340,6 +340,11 @@ func (rm *ReplicationManager) CheckHealth(ctx context.Context) map[string]bool {
 	return health
 }
 
+// GetReplicas returns replica configs (for region-aware routing).
+func (rm *ReplicationManager) GetReplicas() []*ReplicaConfig {
+	return append([]*ReplicaConfig{}, rm.replicas...)
+}
+
 // Failover performs failover to a replica
 func (rm *ReplicationManager) Failover(ctx context.Context) (*ReplicaConfig, error) {
 	// Find healthy replica with highest priority

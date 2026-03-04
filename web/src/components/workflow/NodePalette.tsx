@@ -1,5 +1,4 @@
 import { useCallback } from 'react';
-import { WorkflowNode } from '../hooks/useWorkflowDesigner';
 
 interface NodePaletteProps {
   onAddNode: (type: string, position: { x: number; y: number }) => void;
@@ -43,7 +42,7 @@ const nodeTypes = [
   },
 ];
 
-export default function NodePalette({ onAddNode }: NodePaletteProps) {
+export default function NodePalette({ onAddNode: _onAddNode }: NodePaletteProps) {
   const handleDragStart = useCallback(
     (event: React.DragEvent, nodeType: string) => {
       event.dataTransfer.setData('application/reactflow', nodeType);

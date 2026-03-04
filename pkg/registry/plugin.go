@@ -23,6 +23,7 @@ type PluginMetadata struct {
 	Permissions  []Permission           `json:"permissions" yaml:"permissions"`
 	Checksum     string                 `json:"checksum" yaml:"checksum"`
 	Signature    string                 `json:"signature,omitempty" yaml:"signature,omitempty"`
+	ArtifactURL  string                 `json:"artifact_url,omitempty" yaml:"artifact_url,omitempty"`
 	CreatedAt    time.Time              `json:"created_at" yaml:"created_at"`
 	UpdatedAt    time.Time              `json:"updated_at" yaml:"updated_at"`
 	Metadata     map[string]interface{} `json:"metadata,omitempty" yaml:"metadata,omitempty"`

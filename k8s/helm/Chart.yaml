@@ -13,9 +13,9 @@ keywords:
 maintainers:
   - name: AgentRuntime Team
     email: team@agentruntime.io
-home: https://github.com/agentruntime/agentruntime
+home: https://github.com/NikoSokratous/agentctl
 sources:
-  - https://github.com/agentruntime/agentruntime
+  - https://github.com/NikoSokratous/agentctl
 dependencies:
   - name: postgresql
     version: "12.x.x"

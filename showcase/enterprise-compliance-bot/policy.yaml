@@ -1,0 +1,29 @@
+version: "1"
+rules:
+  # Block data exfiltration - external HTTP requests
+  - name: block-external-http
+    match:
+      tool: http_request
+      condition: "!input.url.startsWith('https://internal.') && !input.url.startsWith('http://localhost') && !input.url.startsWith('http://127.0.0.1')"
+    action: deny
+    message: "External API access blocked - data exfiltration prevented"
+
+  # Require approval for high-risk tools (http_request to internal)
+  - name: require-approval-internal-http
+    match:
+      tool: http_request
+      condition: "input.method != 'GET'"
+    action: require_approval
+    message: "Non-GET HTTP requests require human approval"
+
+  # Block sensitive data in requests
+  - name: block-sensitive-domains
+    match:
+      tool: http_request
+      condition: |
+        input.url.contains('evil.com') ||
+        input.url.contains('exfil.') ||
+        input.url.contains('pastebin.com') ||
+        input.url.contains('transfer.sh')
+    action: deny
+    message: "Request to blocked domain"

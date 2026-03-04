@@ -73,7 +73,7 @@ Complete guide for deploying AgentRuntime to production environments.
 
 ```bash
 # Clone repository
-git clone https://github.com/agentruntime/agentruntime.git
+git clone https://github.com/NikoSokratous/agentctl.git
 cd agentruntime
 
 # Build Docker image
@@ -988,6 +988,6 @@ kubectl logs -n agentruntime -l app=agentruntime -f --tail=100
 ## Support
 
 - **Documentation**: [docs.agentruntime.io](https://docs.agentruntime.io)
-- **Issues**: [GitHub](https://github.com/agentruntime/agentruntime/issues)
+- **Issues**: [GitHub](https://github.com/NikoSokratous/agentctl/issues)
 - **Discord**: [Community](https://discord.gg/agentruntime)
 - **Commercial**: [contact@agentruntime.io](mailto:contact@agentruntime.io)

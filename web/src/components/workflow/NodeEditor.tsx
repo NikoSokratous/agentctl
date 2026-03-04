@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { WorkflowNode } from '../hooks/useWorkflowDesigner';
+import { WorkflowNode } from '../../hooks/useWorkflowDesigner';
 
 interface NodeEditorProps {
   node: WorkflowNode | null;
@@ -8,7 +8,7 @@ interface NodeEditorProps {
 }
 
 export default function NodeEditor({ node, onUpdate, onClose }: NodeEditorProps) {
-  const [formData, setFormData] = useState(node?.data || {});
+  const [formData, setFormData] = useState<Partial<WorkflowNode['data']>>(node?.data || {});
 
   if (!node) return null;
 
@@ -18,7 +18,7 @@ export default function NodeEditor({ node, onUpdate, onClose }: NodeEditorProps)
     onClose();
   };
 
-  const handleChange = (field: string, value: any) => {
+  const handleChange = (field: string, value: string | number) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 

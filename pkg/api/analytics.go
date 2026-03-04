@@ -3,17 +3,20 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/agentruntime/agentruntime/pkg/cost"
 	"github.com/agentruntime/agentruntime/pkg/monitoring"
+	"github.com/agentruntime/agentruntime/pkg/policy"
 	"github.com/gorilla/mux"
 )
 
 // AnalyticsAPI handles analytics endpoints
 type AnalyticsAPI struct {
-	costTracker *cost.CostTracker
-	slaMonitor  *monitoring.SLAMonitor
+	costTracker  *cost.CostTracker
+	slaMonitor   *monitoring.SLAMonitor
+	auditLogger  *policy.AuditLogger // optional
 }
 
 // NewAnalyticsAPI creates a new analytics API
@@ -21,6 +24,15 @@ func NewAnalyticsAPI(costTracker *cost.CostTracker, slaMonitor *monitoring.SLAMo
 	return &AnalyticsAPI{
 		costTracker: costTracker,
 		slaMonitor:  slaMonitor,
+	}
+}
+
+// NewAnalyticsAPIWithAudit creates analytics API with policy audit support
+func NewAnalyticsAPIWithAudit(costTracker *cost.CostTracker, slaMonitor *monitoring.SLAMonitor, audit *policy.AuditLogger) *AnalyticsAPI {
+	return &AnalyticsAPI{
+		costTracker: costTracker,
+		slaMonitor:  slaMonitor,
+		auditLogger: audit,
 	}
 }
 
@@ -40,6 +52,11 @@ func (api *AnalyticsAPI) RegisterRoutes(router *mux.Router) {
 	// Performance endpoints
 	router.HandleFunc("/v1/analytics/performance", api.GetPerformance).Methods("GET")
 	router.HandleFunc("/v1/analytics/metrics", api.GetMetrics).Methods("GET")
+	router.HandleFunc("/v1/analytics/denials", api.GetPolicyDenials).Methods("GET")
+	router.HandleFunc("/v1/analytics/denials/stats", api.GetPolicyDenialsStats).Methods("GET")
+
+	// Compliance / SIEM audit export (v2.0)
+	router.HandleFunc("/v1/compliance/audit/export", api.ExportAuditLogs).Methods("GET")
 }
 
 // GetCosts handles GET /v1/analytics/costs
@@ -233,6 +250,103 @@ func (api *AnalyticsAPI) GetMetrics(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(metrics)
+}
+
+// GetPolicyDenials handles GET /v1/analytics/denials
+func (api *AnalyticsAPI) GetPolicyDenials(w http.ResponseWriter, r *http.Request) {
+	if api.auditLogger == nil {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"logs": []interface{}{},
+		})
+		return
+	}
+	timeRange := r.URL.Query().Get("range")
+	limitStr := r.URL.Query().Get("limit")
+	limit := 50
+	if limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
+			limit = l
+		}
+	}
+	start, end := parseTimeRange(timeRange)
+	filter := policy.AuditFilter{
+		Decision: "deny",
+		StartTime: start,
+		EndTime:   end,
+		Limit:     limit,
+	}
+	logs, err := api.auditLogger.Query(r.Context(), filter)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{"logs": logs})
+}
+
+// GetPolicyDenialsStats handles GET /v1/analytics/denials/stats
+func (api *AnalyticsAPI) GetPolicyDenialsStats(w http.ResponseWriter, r *http.Request) {
+	if api.auditLogger == nil {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"denied":            0,
+			"allowed":           0,
+			"top_deny_reasons": []interface{}{},
+		})
+		return
+	}
+	timeRange := r.URL.Query().Get("range")
+	start, end := parseTimeRange(timeRange)
+	stats, err := api.auditLogger.GetStats(r.Context(), start, end)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(stats)
+}
+
+// ExportAuditLogs handles GET /v1/compliance/audit/export for SIEM and compliance reporting.
+// Query params: format=json|csv|cef, range=1h|24h|7d|30d, limit=, agent_name=, decision=.
+func (api *AnalyticsAPI) ExportAuditLogs(w http.ResponseWriter, r *http.Request) {
+	if api.auditLogger == nil {
+		http.Error(w, "audit logging not enabled", http.StatusNotImplemented)
+		return
+	}
+	format := r.URL.Query().Get("format")
+	if format == "" {
+		format = "json"
+	}
+	timeRange := r.URL.Query().Get("range")
+	start, end := parseTimeRange(timeRange)
+	filter := policy.AuditFilter{
+		AgentName: r.URL.Query().Get("agent_name"),
+		PolicyName: r.URL.Query().Get("policy_name"),
+		Decision:   r.URL.Query().Get("decision"),
+		StartTime:  start,
+		EndTime:    end,
+		Limit:      10000,
+	}
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
+			filter.Limit = l
+		}
+	}
+	data, err := api.auditLogger.Export(r.Context(), filter, format)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	switch format {
+	case "cef":
+		w.Header().Set("Content-Type", "application/cef")
+	case "csv":
+		w.Header().Set("Content-Type", "text/csv")
+	default:
+		w.Header().Set("Content-Type", "application/json")
+	}
+	w.Write(data)
 }
 
 // parseTimeRange parses a time range string and returns start/end times

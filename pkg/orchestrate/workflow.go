@@ -65,6 +65,7 @@ type StepResult struct {
 type WorkflowEngine struct {
 	server       *Server
 	celEvaluator *workflow.CELEvaluator
+	executor     StepExecutor
 }
 
 // NewWorkflowEngine creates a new workflow engine.
@@ -73,7 +74,22 @@ func NewWorkflowEngine(server *Server) *WorkflowEngine {
 	return &WorkflowEngine{
 		server:       server,
 		celEvaluator: celEval,
+		executor:     SimulatedExecutor{},
 	}
+}
+
+// NewWorkflowEngineWithExecutor creates a workflow engine with a custom step executor.
+func NewWorkflowEngineWithExecutor(server *Server, executor StepExecutor) *WorkflowEngine {
+	celEval, _ := workflow.NewCELEvaluator()
+	eng := &WorkflowEngine{
+		server:       server,
+		celEvaluator: celEval,
+		executor:     executor,
+	}
+	if eng.executor == nil {
+		eng.executor = SimulatedExecutor{}
+	}
+	return eng
 }
 
 // Execute runs a workflow.
@@ -242,33 +258,26 @@ func (w *WorkflowEngine) executeParallel(ctx context.Context, config *WorkflowCo
 	return nil
 }
 
-// executeStep executes a single workflow step.
+// executeStep executes a single workflow step via the configured executor.
 func (w *WorkflowEngine) executeStep(ctx context.Context, step *WorkflowStep, outputs map[string]interface{}) (*StepResult, error) {
-	stepResult := &StepResult{
-		Name:      step.Name,
-		Agent:     step.Agent,
-		Status:    "running",
-		StartedAt: time.Now(),
-	}
-
-	// Render goal template with outputs
 	goal := w.renderGoalWithOutputs(step.Goal, outputs)
-
-	// TODO: Execute agent via delegation when runtime integration is available
-	// For now, simulate execution
-	runID := fmt.Sprintf("run-%s-%d", step.Agent, time.Now().Unix())
-	stepResult.RunID = runID
-
-	time.Sleep(100 * time.Millisecond)
-
-	stepResult.CompletedAt = time.Now()
-	stepResult.Duration = stepResult.CompletedAt.Sub(stepResult.StartedAt)
-	stepResult.Status = "completed"
-	stepResult.Output = map[string]interface{}{
-		"agent": step.Agent,
-		"goal":  goal,
+	exec := w.executor
+	if exec == nil {
+		exec = SimulatedExecutor{}
 	}
-
+	stepResult, err := exec.ExecuteStep(ctx, step.Agent, goal, outputs)
+	if err != nil {
+		now := time.Now()
+		return &StepResult{
+			Name:        step.Name,
+			Agent:       step.Agent,
+			Status:      "failed",
+			Error:       err.Error(),
+			StartedAt:   now,
+			CompletedAt: now,
+		}, err
+	}
+	stepResult.Name = step.Name
 	return stepResult, nil
 }
 

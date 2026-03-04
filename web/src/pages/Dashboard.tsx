@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { Activity, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
+import LoadingSpinner from '../components/LoadingSpinner'
 import './Dashboard.css'
 
 interface Run {
@@ -56,7 +57,7 @@ const Dashboard: React.FC = () => {
   if (isLoading) {
     return (
       <div className="dashboard">
-        <div className="loading">Loading runs...</div>
+        <LoadingSpinner message="Loading runs..." />
       </div>
     )
   }
@@ -73,11 +74,9 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="dashboard">
-      <header className="dashboard-header">
-        <div>
-          <h1>Agent Runs</h1>
-          <p className="subtitle">Monitor and manage your autonomous agents</p>
-        </div>
+      <header className="page-header">
+        <h1>Agent Runs</h1>
+        <p className="subtitle">Monitor and manage your autonomous agents</p>
         <div className="header-stats">
           <div className="stat-card">
             <div className="stat-value">{data?.total || 0}</div>

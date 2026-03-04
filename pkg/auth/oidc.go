@@ -75,18 +75,26 @@ func (p *OIDCProvider) ExchangeCode(ctx context.Context, code string) (*oauth2.T
 	return oauth2Token, idToken, nil
 }
 
-// GetUserInfo extracts user information from ID token.
-func (p *OIDCProvider) GetUserInfo(idToken *oidc.IDToken) (*UserInfo, error) {
-	var claims struct {
-		Email         string `json:"email"`
-		EmailVerified bool   `json:"email_verified"`
-		Name          string `json:"name"`
-		Picture       string `json:"picture"`
-	}
+// ClaimsWithEntitlements holds standard OIDC claims plus groups/roles.
+type ClaimsWithEntitlements struct {
+	Email         string   `json:"email"`
+	EmailVerified bool     `json:"email_verified"`
+	Name          string   `json:"name"`
+	Picture       string   `json:"picture"`
+	Groups        []string `json:"groups"`
+	Roles         []string `json:"roles"`
+}
 
+// GetUserInfo extracts user information and entitlements from ID token.
+func (p *OIDCProvider) GetUserInfo(idToken *oidc.IDToken) (*UserInfo, error) {
+	var claims ClaimsWithEntitlements
 	if err := idToken.Claims(&claims); err != nil {
 		return nil, fmt.Errorf("parse claims: %w", err)
 	}
+
+	entitlements := make([]string, 0, len(claims.Groups)+len(claims.Roles))
+	entitlements = append(entitlements, claims.Groups...)
+	entitlements = append(entitlements, claims.Roles...)
 
 	return &UserInfo{
 		ID:            idToken.Subject,
@@ -95,6 +103,8 @@ func (p *OIDCProvider) GetUserInfo(idToken *oidc.IDToken) (*UserInfo, error) {
 		Name:          claims.Name,
 		Picture:       claims.Picture,
 		Provider:      "oidc",
+		Entitlements:  entitlements,
+		Groups:        claims.Groups,
 	}, nil
 }
 

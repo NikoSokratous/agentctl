@@ -38,6 +38,6 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/agentruntime/agentruntime"
-Documentation = "https://github.com/agentruntime/agentruntime"
-Repository = "https://github.com/agentruntime/agentruntime"
+Homepage = "https://github.com/NikoSokratous/agentctl"
+Documentation = "https://github.com/NikoSokratous/agentctl"
+Repository = "https://github.com/NikoSokratous/agentctl"

@@ -1,0 +1,35 @@
+# SOC2-oriented policy bundle for AgentRuntime
+# Covers: access control (CC6.1), audit logging (CC7.2), change management
+version: "1"
+rules:
+  - name: soc2-privileged-approval
+    match:
+      tool: ""
+      risk_score: ">= 0.7"
+    action: require_approval
+    approvers:
+      - security-admin
+    message: SOC2 CC6.1 - High-risk action requires approval
+
+  - name: soc2-production-writes
+    match:
+      environment: production
+    action: require_approval
+    approvers:
+      - change-approver
+    message: SOC2 change management - Production changes require approval
+
+  - name: soc2-block-data-exfil
+    match:
+      tool: send_email
+      condition: "input.to != '' && !input.to.endsWith('@company.com')"
+    action: deny
+    message: SOC2 CC6.1 - External email blocked; use approved channels
+
+  - name: soc2-high-risk-alert
+    match:
+      risk_score: ">= 0.8"
+    action: require_approval
+    approvers:
+      - security-admin
+    message: SOC2 CC7.2 - High risk; approval required for audit trail

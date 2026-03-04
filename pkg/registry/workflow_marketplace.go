@@ -239,3 +239,117 @@ func (wm *WorkflowMarketplace) GetByCategory(ctx context.Context, category strin
 		"limit":    limit,
 	})
 }
+
+// WorkflowVersion represents a versioned workflow template.
+type WorkflowVersion struct {
+	ID           string    `json:"id"`
+	WorkflowName string    `json:"workflow_name"`
+	Version      string    `json:"version"`
+	TemplateYAML string    `json:"template_yaml"`
+	Parameters   string    `json:"parameters"`
+	Author       string    `json:"author"`
+	Changelog    string    `json:"changelog"`
+	EffectiveAt  time.Time `json:"effective_at"`
+	CreatedAt    time.Time `json:"created_at"`
+	Metadata     string    `json:"metadata"`
+}
+
+// ListWorkflowVersions lists all versions of a workflow.
+func (wm *WorkflowMarketplace) ListWorkflowVersions(ctx context.Context, workflowName string) ([]WorkflowVersion, error) {
+	query := `
+		SELECT id, workflow_name, version, template_yaml, parameters, author,
+		       changelog, effective_at, created_at, metadata
+		FROM workflow_versions
+		WHERE workflow_name = ?
+		ORDER BY created_at DESC
+	`
+	rows, err := wm.db.QueryContext(ctx, query, workflowName)
+	if err != nil {
+		return nil, fmt.Errorf("query workflow versions: %w", err)
+	}
+	defer rows.Close()
+
+	var versions []WorkflowVersion
+	for rows.Next() {
+		var v WorkflowVersion
+		err := rows.Scan(
+			&v.ID, &v.WorkflowName, &v.Version, &v.TemplateYAML, &v.Parameters,
+			&v.Author, &v.Changelog, &v.EffectiveAt, &v.CreatedAt, &v.Metadata,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan version: %w", err)
+		}
+		versions = append(versions, v)
+	}
+	return versions, rows.Err()
+}
+
+// GetWorkflowVersion retrieves a specific workflow version.
+func (wm *WorkflowMarketplace) GetWorkflowVersion(ctx context.Context, workflowName, version string) (*WorkflowVersion, error) {
+	query := `
+		SELECT id, workflow_name, version, template_yaml, parameters, author,
+		       changelog, effective_at, created_at, metadata
+		FROM workflow_versions
+		WHERE workflow_name = ? AND version = ?
+	`
+	var v WorkflowVersion
+	err := wm.db.QueryRowContext(ctx, query, workflowName, version).Scan(
+		&v.ID, &v.WorkflowName, &v.Version, &v.TemplateYAML, &v.Parameters,
+		&v.Author, &v.Changelog, &v.EffectiveAt, &v.CreatedAt, &v.Metadata,
+	)
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("workflow version not found: %s@%s", workflowName, version)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("query workflow version: %w", err)
+	}
+	return &v, nil
+}
+
+// PublishWorkflowVersion saves a new workflow version.
+func (wm *WorkflowMarketplace) PublishWorkflowVersion(ctx context.Context, v *WorkflowVersion) error {
+	if v.ID == "" {
+		v.ID = fmt.Sprintf("wv-%d", time.Now().UnixNano())
+	}
+	if v.CreatedAt.IsZero() {
+		v.CreatedAt = time.Now()
+	}
+	if v.EffectiveAt.IsZero() {
+		v.EffectiveAt = v.CreatedAt
+	}
+
+	query := `
+		INSERT INTO workflow_versions (
+			id, workflow_name, version, template_yaml, parameters,
+			author, changelog, effective_at, created_at, metadata
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`
+	_, err := wm.db.ExecContext(ctx, query,
+		v.ID, v.WorkflowName, v.Version, v.TemplateYAML, v.Parameters,
+		v.Author, v.Changelog, v.EffectiveAt, v.CreatedAt, v.Metadata,
+	)
+	if err != nil {
+		return fmt.Errorf("insert workflow version: %w", err)
+	}
+	return nil
+}
+
+// ListWorkflowNames returns distinct workflow names that have versions.
+func (wm *WorkflowMarketplace) ListWorkflowNames(ctx context.Context) ([]string, error) {
+	query := `SELECT DISTINCT workflow_name FROM workflow_versions ORDER BY workflow_name`
+	rows, err := wm.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("query workflow names: %w", err)
+	}
+	defer rows.Close()
+
+	var names []string
+	for rows.Next() {
+		var n string
+		if err := rows.Scan(&n); err != nil {
+			return nil, err
+		}
+		names = append(names, n)
+	}
+	return names, rows.Err()
+}

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, Activity } from 'lucide-react'
 import { format } from 'date-fns'
+import LoadingSpinner from '../components/LoadingSpinner'
 import './RunDetail.css'
 
 interface RunMeta {
@@ -72,7 +73,7 @@ const RunDetail: React.FC = () => {
   }, [runId])
 
   if (isLoading) {
-    return <div className="run-detail loading">Loading...</div>
+    return <div className="run-detail"><LoadingSpinner message="Loading run..." /></div>
   }
 
   if (error || !run) {

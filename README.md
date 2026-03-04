@@ -4,9 +4,10 @@
 
 **Production-grade runtime for autonomous AI agents**
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/agentruntime/agentruntime)](https://goreportcard.com/report/github.com/agentruntime/agentruntime)
+[![CI](https://github.com/NikoSokratous/agentctl/actions/workflows/ci.yml/badge.svg)](https://github.com/NikoSokratous/agentctl/actions)
+[![Go Report Card](https://goreportcard.com/badge/github.com/NikoSokratous/agentctl)](https://goreportcard.com/report/github.com/NikoSokratous/agentctl)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Release](https://img.shields.io/github/v/release/agentruntime/agentruntime)](https://github.com/agentruntime/agentruntime/releases)
+[![Release](https://img.shields.io/github/v/release/NikoSokratous/agentctl)](https://github.com/NikoSokratous/agentctl/releases)
 
 [Features](#-features) •
 [Quick Start](#-quick-start) •
@@ -38,8 +39,9 @@ AgentRuntime is an **enterprise-grade orchestration platform** for autonomous AI
 ### 🔐 Security & Governance
 - **Policy Engine**: YAML-based policies with CEL expressions
 - **Risk Scoring**: Real-time risk assessment across 7 categories
-- **Audit Logs**: Encrypted, tamper-proof execution logs
-- **RBAC**: Role-based access control with multi-tenancy
+- **Audit Logs**: Encrypted, tamper-proof execution logs; SIEM export (JSON/CSV/CEF)
+- **RBAC**: Role-based access control; SSO/SAML/OIDC; advanced RBAC (templates, delegation)
+- **Secrets**: Vault, AWS/GCP backends; `secret:ref:` in config
 
 ### 🔄 Workflow Orchestration
 - **Visual Designer**: Drag-and-drop workflow builder
@@ -56,6 +58,8 @@ AgentRuntime is an **enterprise-grade orchestration platform** for autonomous AI
 ### 🚀 Enterprise Scale
 - **Kubernetes Operator**: Custom resources for agents and workflows
 - **Helm Charts**: Production-ready deployments
+- **Air-Gapped**: Offline bundle, local LLMs (Ollama), compliance configs included
+- **Compliance Pack**: SOC2, HIPAA configs; SIEM audit export
 - **Service Mesh**: Istio/Linkerd integration with mTLS
 - **Auto-Scaling**: Queue depth and custom metrics-based scaling
 
@@ -65,7 +69,7 @@ AgentRuntime is an **enterprise-grade orchestration platform** for autonomous AI
 - **RAG (Retrieval Augmented Generation)**: Ingest documents, semantic search, ground responses in your knowledge base
 - **Embeddings**: OpenAI and local (sentence-transformers) for semantic memory and RAG
 - **Local Storage**: SQLite for persistent memory; in-memory vector store for development
-- **Tool Framework**: Schema-validated, versioned, permission-controlled
+- **Tool Framework**: Schema-validated, versioned, permission-controlled; MCP support
 - **Deterministic Replay**: 5 replay modes for debugging
 - **Multi-Agent**: Task delegation and collaboration
 
@@ -135,7 +139,11 @@ cd web && npm install && npm run dev
 - **[API Integration](docs/API_INTEGRATION.md)** - SDK usage and examples
 
 ### For Operators
+- **[Release Notes v2.0](RELEASE_NOTES_V2.0.md)** - v1.1 through v2.0 changelog
 - **[Deployment Guide](docs/DEPLOYMENT.md)** - Kubernetes, Docker, bare metal
+- **[Air-Gapped Deployment](deploy/air-gapped/README.md)** - Offline / disconnected install
+- **[Enterprise SSO](docs/guides/enterprise-sso.md)** - SAML, OIDC configuration
+- **[Secrets Management](docs/guides/secrets-management.md)** - Vault, external backends
 - **[Configuration](docs/CONFIGURATION.md)** - All configuration options
 - **[Security Guide](docs/SECURITY.md)** - Best practices and hardening
 - **[Monitoring](docs/MONITORING.md)** - Observability setup
@@ -215,17 +223,22 @@ Ingest docs, then run: `agentctl context ingest ./docs`
 │         │                  │                  │              │
 │         └──────────────────┼──────────────────┘              │
 │                            │                                 │
+│  ┌────────────────────────┴────────────────────────┐        │
+│  │  Auth: OAuth2 / OIDC / SAML • Advanced RBAC     │        │
+│  └────────────────────────┬────────────────────────┘        │
+│                            │                                 │
 │         ┌──────────────────┴──────────────────┐              │
 │         │     Orchestration Layer             │              │
 │         │  - Workflow Engine (DAG)            │              │
 │         │  - Policy Enforcement               │              │
-│         │  - Cost Tracking                    │              │
+│         │  - Cost & Budget Tracking           │              │
+│         │  - Compliance / SIEM Export         │              │
 │         └──────────────────┬──────────────────┘              │
 │                            │                                 │
 │         ┌──────────────────┴──────────────────┐              │
 │         │     Agent Runtime                   │              │
 │         │  - State Machine                    │              │
-│         │  - Tool Executor                    │              │
+│         │  - Tool Executor + MCP              │              │
 │         │  - Memory Manager                   │              │
 │         │  - LLM Integration                  │              │
 │         └──────────────────┬──────────────────┘              │
@@ -233,6 +246,8 @@ Ingest docs, then run: `agentctl context ingest ./docs`
 │  ┌──────────┬──────────┬──┴────┬──────────┬──────────┐     │
 │  │ PostgreSQL│  Redis  │ Qdrant│ Prometheus│ Jaeger  │     │
 │  └──────────┴──────────┴───────┴──────────┴──────────┘     │
+│                                                               │
+│  Vault / Secrets • Air-Gapped • Compliance Pack              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -241,7 +256,10 @@ Ingest docs, then run: `agentctl context ingest ./docs`
 - **Workflow Orchestrator**: DAG-based multi-agent coordination  
 - **Policy Engine**: CEL-based policy enforcement
 - **Memory Layer**: Multi-tier memory architecture
-- **Tool Registry**: Versioned, permission-controlled tools
+- **Tool Registry**: Versioned tools, MCP support
+- **Auth**: OAuth2, OIDC, SAML 2.0, advanced RBAC
+- **Compliance**: SOC2/HIPAA configs, SIEM export API
+- **Deployment**: Kubernetes, air-gapped, local LLMs (Ollama)
 - **Observability**: Tracing, metrics, logs, and replay
 
 👉 **See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for deep dive**
@@ -290,7 +308,7 @@ Ingest docs, then run: `agentctl context ingest ./docs`
 
 ## 🗺️ Roadmap
 
-### ✅ v1.0 (Current)
+### ✅ v1.0 (Complete)
 - [x] Visual workflow designer
 - [x] Kubernetes operator
 - [x] Cost attribution and SLA monitoring
@@ -301,26 +319,117 @@ Ingest docs, then run: `agentctl context ingest ./docs`
 - [x] Context assembly with embeddings (OpenAI + local)
 - [x] Semantic memory search and local storage (SQLite, in-memory)
 
-### 🔮 v1.1 (Next)
-- [ ] Multi-region deployment
-- [ ] Advanced caching layer
-- [ ] Workflow versioning
-- [ ] A/B testing framework
-- [ ] Enhanced collaboration features
+### ✅ v1.1: Pitch Readiness (Complete)
+- [x] Safety-First Demo (showcase/safety-first-demo/)
+- [x] Showcase App: Enterprise Compliance Bot (showcase/enterprise-compliance-bot/)
+- [x] Policy Playground (Web UI)
+- [x] Policy denials API and Analytics UI
+- [x] ROI methodology (docs/ROI_BENCHMARK.md or equivalent)
 
-### 🚀 v2.0 (Future)
-- [ ] Agent marketplace
-- [ ] Federated learning
-- [ ] Edge deployment
-- [ ] Mobile SDKs
+### ✅ v1.2: Ecosystem and Governance (Complete)
+- [x] MCP (Model Context Protocol) Support
+- [x] HITL Demo Flow
+- [x] Budget Caps and Alerts (pkg/cost/budget.go)
+- [x] GitOps for Policies (agentctl policy apply)
+- [x] Workflow Versioning
+
+### ✅ v1.3: Enterprise Foundations (Complete)
+- [x] SSO / SAML / OIDC
+- [x] Multi-Region / HA
+- [x] Secrets Management (Vault, AWS/GCP Secrets Manager)
+- [x] Enterprise Integrations (Slack, Teams, Jira/ServiceNow)
+- [x] Advanced RBAC
+
+### 🚀 v2.0: Enterprise Platform and Commercialization (Target: ~12–16 weeks)
+
+**Goal:** Compliance packaging, air-gapped deployment, and clear commercial offer.
+
+#### 1. Compliance Pack ✅
+- **Deliverable:** `configs/compliance/soc2/`, `configs/compliance/hipaa/`, `GET /v1/compliance/audit/export?format=json|csv|cef` for SIEM.
+
+#### 2. Air-Gapped Deployment ✅
+- **Deliverable:** `deploy/air-gapped/`, `scripts/offline-install.sh` (bundle + install); optional Ollama/local model config.
+
+#### 3. Open-Core Structure ✅
+- **Deliverable:** `pkg/license/` feature gating (OSS core vs enterprise features); packaging for enterprise binary.
+
+#### 4. Hosted Tier (Optional)
+- **What:** Managed AgentRuntime for teams that prefer not to self-host.
+- **Deliverable:** Hosted offering; separate pricing/sales motion.
+
+#### 5. Agent Marketplace
+- **What:** Public or private marketplace for workflows/tools; paid listings with revenue share.
+- **Deliverable:** Marketplace UI, listing/purchase flow (extend `pkg/registry/workflow_marketplace.go`, `pkg/tool/marketplace.go`).
+
+#### 6. Support and Documentation ✅
+- **Deliverable:** [SUPPORT.md](SUPPORT.md), [docs/PRICING.md](docs/PRICING.md), [docs/SOW_TEMPLATE.md](docs/SOW_TEMPLATE.md).
+
+---
+
+### 🎯 v3.0: Production Runtime & Agentic Orchestration (Target: ~12–16 weeks)
+
+**Goal:** Enable real production workloads and differentiate with intelligent orchestration. Addresses the primary barrier to first users: simulated execution.
+
+**Rationale:** Without real workflow execution, users cannot run production agents. Agentic orchestration (multi-model routing, dynamic tool selection) differentiates AgentRuntime from generic workflow engines.
+
+#### 1. Full Runtime Integration
+- **Problem:** Webhook-triggered and scheduled runs complete without real execution; `StepExecutor` default is simulated.
+- **Deliverables:**
+  - Wire webhook handlers to real agent runtime
+  - Scheduled/cron workflow execution
+  - Event-driven triggers (pub/sub, queues)
+  - Runner service for isolated workflow execution
+  - Long-running workflows with checkpointing and resumption
+- **Outcome:** Production workflows execute end-to-end; external systems can trigger agents reliably.
+
+#### 2. Agentic Orchestration
+- **Problem:** Static workflows; no intelligent routing or model selection.
+- **Deliverables:**
+  - Multi-model routing (route tasks to best LLM by cost, latency, capability)
+  - Dynamic tool/agent selection (LLM decides which tools to call)
+  - Guardrails layer (output constraints, topic control, safety filters)
+  - Streaming/incremental execution where applicable
+- **Outcome:** Smarter, more cost-efficient orchestration; clear differentiation from simple DAG runners.
+
+---
+
+### 📋 v4.0: Observability & Governance (Backlog)
+- Agent usage analytics (by tenant, workflow, model)
+- Model drift and performance monitoring
+- Human review queues and approval flows
+- Compliance report generation
+- Agent A/B testing framework
+
+### 📋 v5.0: Developer Experience (Backlog)
+- VS Code extension (local dev, workflow authoring, debugging)
+- Time-travel debugging for deterministic runs
+- Local-first development with cloud sync
+- TypeScript/Node SDK
+- Tool authoring test harness and mocks
+
+### 📋 v6.0: Edge & Federated (Backlog)
+- Edge deployment (agents closer to data/sensors)
+- Federated learning patterns for cross-org models
+- Hybrid orchestration (central control + edge execution)
+- Resource-constrained device support (ARM, low memory)
+
+### 📋 v7.0: Natural Language Workflows (Backlog)
+- Natural language workflow definitions
+- Conversational policy configuration
+- No-code branching and routing
+- “Explain this workflow” in plain language
+
+### 📋 v8.0+: Hosted & Marketplace (Backlog)
+- **Hosted Tier:** Managed AgentRuntime; multi-tenant SaaS; usage-based pricing.
+- **Agent Marketplace:** Private/public marketplace; paid listings; discovery and curation.
 
 ---
 
 ## ⚠️ Known Limitations
 
-- **Workflow execution**: Orchestration and webhook handlers use simulated delegation until full runtime integration; workflow DAGs run with placeholder execution in some paths.
-- **Kubernetes operator**: Requires running `controller-gen` to generate DeepCopy methods before compilation. See [k8s/operator/BUILD_NOTES.md](k8s/operator/BUILD_NOTES.md).
-- **Advanced features**: Replay side effects, plugin artifact download, and some risk/cost fallbacks use stubs. Core features are production-ready.
+- **Workflow execution**: Orchestration uses `StepExecutor`; default is simulated. For real agent runs, wire a custom executor via `NewWorkflowEngineWithExecutor`. Webhook-triggered runs still mark completed without execution until runner integration (Phase 2–3).
+- **Kubernetes operator**: Run `make generate-operator` (or `controller-gen` per [k8s/operator/BUILD_NOTES.md](k8s/operator/BUILD_NOTES.md)) before first build. Generated `zz_generated.deepcopy.go` is committed.
+- **Advanced features**: Plugin artifact download and replay side effects (Replayable `http_call` GET) are implemented. Core features are production-ready.
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#known-limitations--implementation-notes) for details.
 
@@ -343,9 +452,20 @@ Built with:
 
 ---
 
+## 💬 Community
+
+- **GitHub Discussions**: [Ask questions and share ideas](https://github.com/NikoSokratous/agentctl/discussions)
+- **Discord**: [Join our community](https://discord.gg/agentruntime)
+- **Twitter**: [@agentruntime](https://twitter.com/agentruntime)
+- **Blog**: [blog.agentruntime.io](https://blog.agentruntime.io)
+
+---
+
 ## 📞 Support
 
-- **Issues**: [GitHub Issues](https://github.com/agentruntime/agentruntime/issues)
+- **Documentation**: [docs.agentruntime.io](https://docs.agentruntime.io)
+- **Issues**: [GitHub Issues](https://github.com/NikoSokratous/agentctl/issues)
+- **Commercial Support**: [contact@agentruntime.io](mailto:contact@agentruntime.io)
 
 ---
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"regexp"
 	"time"
 )
 
@@ -497,34 +498,22 @@ func (e *RiskEngine) makeDecision(score RiskScore, ctx ActionContext) RiskDecisi
 	return DecisionAllow
 }
 
-// containsPII checks for PII patterns (simplified).
+// containsPII checks for common PII patterns using regex.
+// Uses heuristics for SSN, email, credit card, phone; production may integrate dedicated PII detection.
+var (
+	piiSSN       = regexp.MustCompile(`\b\d{3}[-\s]?\d{2}[-\s]?\d{4}\b`)
+	piiEmail     = regexp.MustCompile(`[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}`)
+	piiCreditCard = regexp.MustCompile(`\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b`)
+	piiPhone     = regexp.MustCompile(`(?:\+1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b`)
+	piiKeywords  = regexp.MustCompile(`(?i)\b(?:ssn|social\s*security|credit\s*card|password|secret|api[_-]?key|token)\b`)
+)
+
 func containsPII(input string) bool {
-	// In production, use proper PII detection
-	// This is a simplified placeholder
-	piiPatterns := []string{
-		"ssn", "social security",
-		"credit card", "password",
-		"email@", "@",
+	if piiSSN.MatchString(input) || piiEmail.MatchString(input) ||
+		piiCreditCard.MatchString(input) || piiPhone.MatchString(input) ||
+		piiKeywords.MatchString(input) {
+		return true
 	}
-
-	for _, pattern := range piiPatterns {
-		if len(input) > len(pattern) {
-			// Simple contains check
-			for i := 0; i <= len(input)-len(pattern); i++ {
-				match := true
-				for j := 0; j < len(pattern); j++ {
-					if input[i+j] != pattern[j] {
-						match = false
-						break
-					}
-				}
-				if match {
-					return true
-				}
-			}
-		}
-	}
-
 	return false
 }
 

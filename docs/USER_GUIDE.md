@@ -976,7 +976,7 @@ curl -X POST http://localhost:8080/api/v1/webhooks/github-pr \
 
 ### Community
 - **Discord**: [Join chat](https://discord.gg/agentruntime)
-- **GitHub**: [Issues & discussions](https://github.com/agentruntime/agentruntime)
+- **GitHub**: [Issues & discussions](https://github.com/NikoSokratous/agentctl)
 - **Blog**: [blog.agentruntime.io](https://blog.agentruntime.io)
 
 ### Support

@@ -1,0 +1,21 @@
+version: "1"
+rules:
+  - name: external-email-approval
+    match:
+      tool: send_email
+      condition: "input.to.endsWith('@external.com')"
+    action: require_approval
+    approvers:
+      - admin
+
+  - name: block-production-writes
+    match:
+      tool: db_write
+      environment: production
+    action: deny
+    message: DB writes blocked in production
+
+  - name: high-risk-cap
+    match:
+      risk_score: ">= 0.8"
+    action: require_approval

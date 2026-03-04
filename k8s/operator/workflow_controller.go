@@ -99,7 +99,7 @@ func (r *WorkflowReconciler) handleScheduledWorkflow(ctx context.Context, workfl
 		workflow.Status.LastScheduleTime = &lastScheduleTime
 		
 		// Execute the workflow
-		if err := r.handleWorkflowExecution(ctx, workflow); err != nil {
+		if _, err := r.handleWorkflowExecution(ctx, workflow); err != nil {
 			logger.Error(err, "Failed to execute scheduled workflow")
 			// Don't return error - continue scheduling
 		}

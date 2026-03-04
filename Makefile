@@ -1,4 +1,4 @@
-.PHONY: build test clean run-agentctl run-agentd
+.PHONY: build test clean run-agentctl run-agentd generate-operator
 
 BINARY_AGENTCTL := bin/agentctl
 BINARY_AGENTD := bin/agentd
@@ -43,3 +43,16 @@ vet:
 	$(GO) vet ./...
 
 lint: fmt vet
+
+generate-operator:
+	cd k8s/operator && controller-gen object:headerFile="hack/boilerplate.go.txt" paths="./api/v1/..."
+
+showcase-deploy: build-agentctl
+	@echo "Deploying showcase enterprise-compliance-bot..."
+	@if command -v helm >/dev/null 2>&1 && command -v kubectl >/dev/null 2>&1; then \
+		helm upgrade --install agentruntime ./k8s/helm -f ./k8s/helm/values.yaml 2>/dev/null || true; \
+		kubectl apply -f ./showcase/enterprise-compliance-bot/k8s/; \
+		echo "Showcase deployed. Run: agentctl run --config showcase/enterprise-compliance-bot/agent.yaml --goal '...'"; \
+	else \
+		echo "Helm/kubectl not found. Use: agentctl run --config showcase/enterprise-compliance-bot/agent.yaml"; \
+	fi

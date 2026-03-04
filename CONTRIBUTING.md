@@ -31,7 +31,7 @@ This project adheres to a Code of Conduct that all contributors are expected to 
 
 ```bash
 # Clone repository
-git clone https://github.com/agentruntime/agentruntime.git
+git clone https://github.com/NikoSokratous/agentctl.git
 cd agentruntime
 
 # Install dependencies
@@ -332,7 +332,7 @@ Contributors are recognized in:
 
 ## Questions?
 
-- Check [existing issues](https://github.com/agentruntime/agentruntime/issues)
+- Check [existing issues](https://github.com/NikoSokratous/agentctl/issues)
 - Read the [documentation](../guides/)
 - Ask in GitHub Discussions
 

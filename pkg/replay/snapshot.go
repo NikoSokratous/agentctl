@@ -72,6 +72,7 @@ type SideEffect struct {
 	Target      string          `json:"target"` // file path, URL, table name
 	Description string          `json:"description"`
 	Reversible  bool            `json:"reversible"`
+	Replayable  bool            `json:"replayable"` // when true, executeSideEffect may re-execute (e.g. idempotent GET)
 	RevertData  json.RawMessage `json:"revert_data,omitempty"`
 	Timestamp   time.Time       `json:"timestamp"`
 }

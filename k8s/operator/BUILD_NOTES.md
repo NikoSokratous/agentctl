@@ -14,15 +14,16 @@ The Kubernetes operator code is present but requires code generation before it c
 2. **Generate DeepCopy methods**:
    ```bash
    cd k8s/operator
-   controller-gen object:headerFile="hack/boilerplate.go.txt" paths="./api/..."
+   controller-gen object:headerFile="hack/boilerplate.go.txt" paths="./api/v1/..."
    ```
+   Or from repo root: `make generate-operator`
 
 3. **Generate CRD manifests**:
    ```bash
    controller-gen crd:trivialVersions=true rbac:roleName=manager-role webhook paths="./..." output:crd:artifacts:config=config/crd/bases
    ```
 
-4. **Uncomment registration** in `api/v1/types.go`:
+4. **Registration** in `api/v1/types.go` (already uncommented):
    ```go
    func init() {
        SchemeBuilder.Register(&Agent{}, &AgentList{})
@@ -36,8 +37,8 @@ The Kubernetes operator code is present but requires code generation before it c
 - ✅ Controller logic is complete
 - ✅ CRD type definitions are complete
 - ✅ Kubernetes dependencies added
-- ❌ DeepCopy methods need generation
-- ❌ CRD YAML manifests need generation
+- ✅ DeepCopy methods generated (zz_generated.deepcopy.go committed)
+- ❌ CRD YAML manifests need generation (optional)
 
 ## For GitHub Release
 

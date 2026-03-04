@@ -1,0 +1,131 @@
+# High Availability values for AgentRuntime
+# Use: helm install agentruntime ./k8s/helm -f k8s/helm/values-ha.yaml
+
+global:
+  environment: production
+  domain: agentruntime.example.com
+
+# Higher replica count for HA
+replicaCount: 5
+
+image:
+  repository: agentruntime/agentruntime
+  pullPolicy: IfNotPresent
+  tag: "1.0.0"
+
+# Stricter resource limits
+resources:
+  limits:
+    cpu: 2000m
+    memory: 4Gi
+  requests:
+    cpu: 500m
+    memory: 1Gi
+
+# Autoscaling for HA
+autoscaling:
+  enabled: true
+  minReplicas: 5
+  maxReplicas: 20
+  targetCPUUtilizationPercentage: 60
+  targetMemoryUtilizationPercentage: 75
+
+# Pod anti-affinity: spread across nodes and zones
+affinity:
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchExpressions:
+            - key: app.kubernetes.io/name
+              operator: In
+              values:
+                - agentruntime
+        topologyKey: kubernetes.io/hostname
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - agentruntime
+          topologyKey: topology.kubernetes.io/zone
+
+# PostgreSQL with read replicas for HA
+postgresql:
+  enabled: true
+  auth:
+    username: agentruntime
+    password: changeme  # Use external secrets
+    database: agentruntime
+  primary:
+    persistence:
+      enabled: true
+      size: 50Gi
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: 2000m
+        memory: 4Gi
+  replication:
+    enabled: true
+    readReplicas: 2
+    synchronousCommit: "on"  # For RPO
+
+# Redis HA with Sentinel
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    password: changeme
+  master:
+    persistence:
+      enabled: true
+      size: 16Gi
+  replica:
+    replicaCount: 2
+  sentinel:
+    enabled: true
+    quorum: 2
+
+# Backup for DR
+backup:
+  enabled: true
+  schedule: "0 */6 * * *"  # Every 6 hours
+  retention: 14
+  storage:
+    type: s3
+    bucket: agentruntime-backups-ha
+    region: us-east-1
+
+# Service mesh for mTLS and traffic management
+serviceMesh:
+  enabled: true
+  type: istio
+  mtls:
+    mode: STRICT
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 200
+      http:
+        http2MaxRequests: 200
+        maxRequestsPerConnection: 4
+    outlierDetection:
+      consecutiveErrors: 3
+      interval: 30s
+      baseEjectionTime: 60s
+      maxEjectionPercent: 30
+
+# Multi-region: set per-region overrides
+# Example: helm install -f values-ha.yaml -f values-region-eu.yaml
+multiRegion:
+  enabled: false
+  regions:
+    - name: us-east-1
+      priority: 10
+    - name: eu-west-1
+      priority: 5

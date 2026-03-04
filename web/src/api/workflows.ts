@@ -28,6 +28,8 @@ export interface WorkflowTemplate {
   template_yaml: string;
   downloads: number;
   rating: number;
+  rating_count?: number;
+  version?: string;
   published_at: string;
 }
 

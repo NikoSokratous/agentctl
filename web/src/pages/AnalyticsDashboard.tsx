@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 interface CostData {
   agent_id: string;
@@ -21,6 +22,22 @@ interface PerformanceData {
   throughput: number;
 }
 
+interface DenialLog {
+  id: string;
+  timestamp: string;
+  agent_name: string;
+  policy_name: string;
+  tool: string;
+  deny_reason?: string;
+  risk_score: number;
+}
+
+interface DenialsStats {
+  denied: number;
+  allowed: number;
+  top_deny_reasons: { reason: string; count: number }[];
+}
+
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
 
 export default function AnalyticsDashboard() {
@@ -30,6 +47,8 @@ export default function AnalyticsDashboard() {
   const [performanceData, setPerformanceData] = useState<PerformanceData[]>([]);
   const [totalCost, setTotalCost] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [denialLogs, setDenialLogs] = useState<DenialLog[]>([]);
+  const [denialsStats, setDenialsStats] = useState<DenialsStats | null>(null);
 
   useEffect(() => {
     loadAnalytics();
@@ -53,6 +72,13 @@ export default function AnalyticsDashboard() {
       const perfResponse = await fetch(`/api/v1/analytics/performance?range=${timeRange}`);
       const perf = await perfResponse.json();
       setPerformanceData(perf.timeline || []);
+
+      try {
+        const denialsResponse = await fetch(`/api/v1/analytics/denials?range=${timeRange}`);
+        const denials = await denialsResponse.json();
+        setDenialLogs(denials.logs || []);
+        setDenialsStats(denials.stats || null);
+      } catch { /* optional */ }
     } catch (error) {
       console.error('Failed to load analytics:', error);
     } finally {
@@ -61,7 +87,7 @@ export default function AnalyticsDashboard() {
   };
 
   if (loading) {
-    return <div className="loading">Loading analytics...</div>;
+    return <div className="analytics-page"><LoadingSpinner message="Loading analytics..." /></div>;
   }
 
   return (
@@ -139,7 +165,60 @@ export default function AnalyticsDashboard() {
             <div className="card-label">Error Rate</div>
           </div>
         </div>
+
+        <div className="card">
+          <div className="card-icon deny">🛡️</div>
+          <div className="card-content">
+            <div className="card-value">{denialsStats?.denied ?? denialLogs?.length ?? 0}</div>
+            <div className="card-label">Policy Denials</div>
+          </div>
+        </div>
       </div>
+
+      {/* Policy Denials */}
+      {(denialLogs.length > 0 || (denialsStats && denialsStats.denied > 0)) && (
+        <div className="chart-section">
+          <h2>Policy Denials</h2>
+          {denialsStats && (
+            <div className="denials-summary">
+              <span>Denied: {denialsStats.denied}</span>
+              <span>Allowed: {denialsStats.allowed}</span>
+              {denialsStats.top_deny_reasons?.length > 0 && (
+                <div className="top-reasons">
+                  <strong>Top reasons:</strong>
+                  {denialsStats.top_deny_reasons.slice(0, 5).map((r, i) => (
+                    <span key={i}>{r.reason}: {r.count}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+          {denialLogs.length > 0 && (
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Agent</th>
+                  <th>Tool</th>
+                  <th>Reason</th>
+                  <th>Risk</th>
+                </tr>
+              </thead>
+              <tbody>
+                {denialLogs.slice(0, 20).map((log) => (
+                  <tr key={log.id}>
+                    <td>{log.timestamp ? new Date(log.timestamp).toLocaleString() : '-'}</td>
+                    <td>{log.agent_name}</td>
+                    <td>{log.tool}</td>
+                    <td>{log.deny_reason || '-'}</td>
+                    <td>{(log.risk_score * 100).toFixed(0)}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
 
       {/* Cost by Agent */}
       <div className="chart-section">
@@ -155,7 +234,7 @@ export default function AnalyticsDashboard() {
               outerRadius={100}
               label={(entry) => `${entry.agent_id}: $${entry.cost.toFixed(2)}`}
             >
-              {costData.map((entry, index) => (
+              {costData.map((_, index) => (
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
             </Pie>
@@ -256,7 +335,7 @@ export default function AnalyticsDashboard() {
       </div>
 
       <style>{`
-        .analytics-dashboard {
+        .analytics-dashboard, .analytics-page {
           padding: 2rem;
           max-width: 1400px;
           margin: 0 auto;
@@ -269,148 +348,117 @@ export default function AnalyticsDashboard() {
           margin-bottom: 2rem;
         }
 
-        .dashboard-header h1 {
-          margin: 0;
-        }
+        .dashboard-header h1 { margin: 0; color: var(--color-text); }
 
-        .time-range-selector {
-          display: flex;
-          gap: 0.5rem;
-        }
+        .time-range-selector { display: flex; gap: 0.5rem; }
 
         .time-range-selector button {
           padding: 0.5rem 1rem;
-          border: 1px solid #d1d5db;
-          background: white;
+          border: 1px solid var(--color-border);
+          background: var(--color-bg-card);
+          color: var(--color-text-muted);
           border-radius: 0.375rem;
           cursor: pointer;
           transition: all 0.2s;
         }
 
         .time-range-selector button:hover {
-          background: #f3f4f6;
+          background: var(--color-bg-hover);
+          color: var(--color-text);
         }
 
         .time-range-selector button.active {
-          background: #3b82f6;
+          background: var(--color-accent);
           color: white;
-          border-color: #3b82f6;
+          border-color: var(--color-accent);
         }
 
         .summary-cards {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          gap: 1.5rem;
+          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+          gap: 1.25rem;
           margin-bottom: 2rem;
         }
 
         .card {
-          background: white;
-          border: 1px solid #e5e7eb;
-          border-radius: 0.5rem;
-          padding: 1.5rem;
+          background: var(--color-bg-card);
+          border: 1px solid var(--color-border);
+          border-radius: 0.75rem;
+          padding: 1.25rem;
           display: flex;
           align-items: center;
           gap: 1rem;
           transition: all 0.2s;
         }
 
-        .card:hover {
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
+        .card:hover { border-color: var(--color-border-strong); }
 
         .card-icon {
-          font-size: 2rem;
-          width: 3rem;
-          height: 3rem;
+          font-size: 1.5rem;
+          width: 2.75rem;
+          height: 2.75rem;
           display: flex;
           align-items: center;
           justify-content: center;
           border-radius: 0.5rem;
         }
 
-        .card-icon.cost {
-          background: #fef3c7;
+        .card-icon.cost { background: rgba(245, 158, 11, 0.2); }
+        .card-icon.sla { background: rgba(99, 102, 241, 0.2); }
+        .card-icon.perf { background: rgba(34, 197, 94, 0.2); }
+        .card-icon.error { background: rgba(239, 68, 68, 0.2); }
+        .card-icon.deny { background: rgba(99, 102, 241, 0.15); }
+
+        .denials-summary {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 1rem;
+          margin-bottom: 1rem;
+          font-size: 0.875rem;
         }
 
-        .card-icon.sla {
-          background: #dbeafe;
-        }
-
-        .card-icon.perf {
-          background: #d1fae5;
-        }
-
-        .card-icon.error {
-          background: #fee2e2;
+        .top-reasons {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.5rem;
         }
 
         .card-content {
           flex: 1;
         }
 
-        .card-value {
-          font-size: 1.75rem;
-          font-weight: 600;
-          color: #111827;
-        }
-
-        .card-label {
-          font-size: 0.875rem;
-          color: #6b7280;
-        }
+        .card-value { font-size: 1.5rem; font-weight: 600; color: var(--color-text); }
+        .card-label { font-size: 0.875rem; color: var(--color-text-muted); }
 
         .chart-section {
-          background: white;
-          border: 1px solid #e5e7eb;
-          border-radius: 0.5rem;
+          background: var(--color-bg-card);
+          border: 1px solid var(--color-border);
+          border-radius: 0.75rem;
           padding: 1.5rem;
           margin-bottom: 2rem;
         }
 
-        .chart-section h2 {
-          margin: 0 0 1rem 0;
-          font-size: 1.25rem;
-        }
+        .chart-section h2 { margin: 0 0 1rem 0; font-size: 1.125rem; color: var(--color-text); }
 
         .tables-section {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
-          gap: 1.5rem;
+          grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+          gap: 1.25rem;
         }
 
         .table-container {
-          background: white;
-          border: 1px solid #e5e7eb;
-          border-radius: 0.5rem;
+          background: var(--color-bg-card);
+          border: 1px solid var(--color-border);
+          border-radius: 0.75rem;
           padding: 1.5rem;
         }
 
-        .table-container h3 {
-          margin: 0 0 1rem 0;
-        }
+        .table-container h3 { margin: 0 0 1rem 0; color: var(--color-text); }
 
-        .data-table {
-          width: 100%;
-          border-collapse: collapse;
-        }
-
-        .data-table th,
-        .data-table td {
-          padding: 0.75rem;
-          text-align: left;
-          border-bottom: 1px solid #e5e7eb;
-        }
-
-        .data-table th {
-          background: #f9fafb;
-          font-weight: 600;
-          font-size: 0.875rem;
-        }
-
-        .data-table td {
-          font-size: 0.875rem;
-        }
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th, .data-table td { padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--color-border); }
+        .data-table th { background: var(--color-bg-elevated); font-weight: 600; font-size: 0.8125rem; color: var(--color-text-muted); }
+        .data-table td { font-size: 0.875rem; color: var(--color-text); }
 
         .status {
           padding: 0.25rem 0.75rem;
@@ -419,21 +467,9 @@ export default function AnalyticsDashboard() {
           font-weight: 500;
         }
 
-        .status.healthy {
-          background: #d1fae5;
-          color: #065f46;
-        }
-
-        .status.warning {
-          background: #fef3c7;
-          color: #92400e;
-        }
-
-        .loading {
-          text-align: center;
-          padding: 3rem;
-          color: #6b7280;
-        }
+        .status.healthy { background: var(--color-success-muted); color: var(--color-success); }
+        .status.warning { background: var(--color-warning-muted); color: var(--color-warning); }
+        .loading { text-align: center; padding: 3rem; color: var(--color-text-muted); }
       `}</style>
     </div>
   );

@@ -1,0 +1,21 @@
+apiVersion: agentruntime.io/v1
+kind: Policy
+metadata:
+  name: enterprise-compliance-policy
+  namespace: default
+spec:
+  description: "Enterprise compliance - block data exfil, require approval for mutations"
+  version: "1.0.0"
+  rules:
+    - id: "block-external-http"
+      description: "Block external HTTP requests"
+      condition: 'tool == "http_request" && !url.startsWith("https://internal.")'
+      action: "deny"
+      severity: "critical"
+
+    - id: "require-approval-mutations"
+      description: "Require approval for non-GET HTTP"
+      condition: 'tool == "http_request" && method != "GET"'
+      action: "require_approval"
+      severity: "high"
+  enabled: true

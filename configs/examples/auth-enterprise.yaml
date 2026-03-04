@@ -1,0 +1,43 @@
+# Example Enterprise SSO configuration
+# Use with agentd or API server
+
+auth:
+  enabled: true
+  providers:
+    - id: okta
+      type: oidc
+      priority: 0
+      oidc:
+        issuer_url: https://dev-12345.okta.com/oauth2/default
+        client_id: your-client-id
+        client_secret: ""  # Set via env or secrets management
+        redirect_url: https://app.example.com/auth/callback
+        scopes: [openid, profile, email, groups]
+        claim_mappings:
+          groups: groups
+
+    - id: saml-corp
+      type: saml
+      priority: 1
+      saml:
+        idp_metadata_path: ./idp-metadata.xml
+        entity_id: https://app.example.com/saml
+        acs_url: https://app.example.com/saml/acs
+        certificate_path: ./certs/sp-cert.pem
+        key_path: ./certs/sp-key.pem
+        attribute_mappings:
+          groups: groups
+          role: entitlements
+
+  session:
+    duration: 24h
+    cookie_name: agent_session
+    cookie_secure: true
+    cookie_same_site: Lax
+
+  entitlements:
+    claim_names: [groups, roles]
+    mapping:
+      admin: admin
+      developer: developer
+      viewer: viewer

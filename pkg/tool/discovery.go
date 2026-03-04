@@ -163,17 +163,12 @@ func (pd *PluginDiscovery) WatchForChanges(dir string, reloadInterval time.Durat
 					if strings.HasSuffix(path, ".so") || strings.HasSuffix(path, ".wasm") {
 						lastMod, exists := modTimes[path]
 						if !exists || info.ModTime().After(lastMod) {
-							// File changed, reload
+							// File changed
 							modTimes[path] = info.ModTime()
 							if exists {
-								// Hot reload: unload old plugin and reload new one
-								pd.mu.Unlock() // Unlock temporarily
-
-								// Note: Hot reload for Go plugins is limited due to Go's plugin system
-								// For production, consider using WASM plugins or external processes
+								// Note: Hot reload for Go plugins is limited due to Go's plugin system.
+								// For production, consider using WASM plugins or external processes.
 								fmt.Printf("Plugin changed: %s (restart required for Go plugins)\n", path)
-
-								pd.mu.Lock() // Re-lock
 							}
 						}
 					}

@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"strings"
 	"time"
 )
 
@@ -328,10 +330,33 @@ func (r *Replayer) assessImpact(err error) string {
 	return ImpactMajor
 }
 
-// executeSideEffect executes a recorded side effect (placeholder).
+// executeSideEffect executes a recorded side effect when safe. Most side effects are skipped for safety.
+// Only Replayable http_call (GET) effects are executed; others are no-op.
 func (r *Replayer) executeSideEffect(se SideEffect) error {
-	// In production, this would actually perform the side effect
-	// For safety, most side effects should NOT be re-executed
+	if !se.Replayable {
+		return nil
+	}
+	if se.Type != SideEffectHTTPCall {
+		return nil
+	}
+	if se.Target == "" || (!strings.HasPrefix(se.Target, "http://") && !strings.HasPrefix(se.Target, "https://")) {
+		return nil
+	}
+	// Re-execute as idempotent GET
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, se.Target, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	resp.Body.Close()
+	if resp.StatusCode >= 400 {
+		return fmt.Errorf("side effect GET %s: status %d", se.Target, resp.StatusCode)
+	}
 	return nil
 }
 

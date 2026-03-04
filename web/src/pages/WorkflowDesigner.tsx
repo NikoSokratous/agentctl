@@ -30,7 +30,6 @@ function WorkflowDesignerContent() {
     onConnect,
     addNode,
     updateNode,
-    deleteNode,
     validateWorkflow,
     exportToYAML,
     importFromYAML,

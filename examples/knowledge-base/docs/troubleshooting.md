@@ -351,19 +351,19 @@ View traces in Jaeger or similar tool.
 
 - Main docs: https://docs.agentruntime.io
 - API reference: https://api.agentruntime.io/docs
-- Examples: https://github.com/agentruntime/examples
+- Examples: https://github.com/NikoSokratous/agentctl
 
 ### Community
 
 - Discord: https://discord.gg/agentruntime
-- GitHub Discussions: https://github.com/agentruntime/agentruntime/discussions
+- GitHub Discussions: https://github.com/NikoSokratous/agentctlagentruntime/discussions
 - Stack Overflow: Tag `agentruntime`
 
 ### Support
 
 - Email: support@agentruntime.io
 - Enterprise support: enterprise@agentruntime.io
-- Bug reports: https://github.com/agentruntime/agentruntime/issues
+- Bug reports: https://github.com/NikoSokratous/agentctl/issues
 
 ## Diagnostic Commands
 

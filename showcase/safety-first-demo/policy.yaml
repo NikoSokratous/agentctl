@@ -1,0 +1,20 @@
+version: "1"
+rules:
+  # Block external HTTP requests (data exfiltration scenario)
+  - name: block-external-http
+    match:
+      tool: http_request
+      condition: "!input.url.startsWith('https://internal.') && !input.url.startsWith('http://localhost')"
+    action: deny
+    message: "External API access blocked - data exfiltration prevented"
+
+  # Block any request to known exfil domains
+  - name: block-exfil-domains
+    match:
+      tool: http_request
+      condition: |
+        input.url.contains('evil.com') ||
+        input.url.contains('exfil.') ||
+        input.url.contains('pastebin.com')
+    action: deny
+    message: "Request to suspicious domain blocked"
